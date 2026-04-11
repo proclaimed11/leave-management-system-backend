@@ -1,0 +1,2 @@
+ALTER TABLE entitlements
+ADD COLUMN IF NOT EXISTS opening_balance_applied BOOLEAN NOT NULL DEFAULT FALSE;

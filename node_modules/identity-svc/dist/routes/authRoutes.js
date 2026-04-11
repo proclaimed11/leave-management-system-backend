@@ -1,0 +1,18 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const identityController_1 = require("../controllers/identityController");
+const auth_jwt_1 = require("@libs/auth-jwt");
+const otpController_1 = require("../controllers/otpController");
+const router = (0, express_1.Router)();
+router.post("/login", identityController_1.login);
+router.post("/sso/login", identityController_1.loginWithSso);
+router.get("/me", auth_jwt_1.authMiddleware, identityController_1.getMe);
+router.post("/refresh", identityController_1.refreshToken);
+router.post("/logout", identityController_1.logout);
+router.post("/logout-all", auth_jwt_1.authMiddleware, identityController_1.logoutAll);
+router.post("/request-otp", otpController_1.requestOtp);
+router.post("/verify-otp", otpController_1.verifyOtp);
+// DEV ONLY — DO NOT expose in production
+router.post("/register", identityController_1.registerUser);
+exports.default = router;

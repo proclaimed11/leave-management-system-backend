@@ -1,0 +1,21 @@
+{
+  "name": "audit-log-svc",
+  "version": "1.0.0",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "ts-node src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "migrate": "ts-node src/db/runMigration.ts"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.11.3",
+    "@libs/common-express": "1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "ts-node": "^10.9.2",
+    "@types/express": "^4.17.21",
+     "express": "^4.19.2"
+  }
+}

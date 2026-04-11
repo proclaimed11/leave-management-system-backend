@@ -1,0 +1,7 @@
+
+CREATE TABLE IF NOT EXISTS departments (
+  dept_key VARCHAR(50) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);

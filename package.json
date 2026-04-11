@@ -1,0 +1,28 @@
+{
+  "name": "esl-leave",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "libs/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "echo Ready for docker-compose; we'll add it soon",
+    "test": "echo (tests go here)"
+  },
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "dependencies": {
+    "@libs/rbac": "^1.0.0",
+    "axios": "^1.13.2",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "morgan": "^1.10.1"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/bcryptjs": "^2.4.6"
+  }
+}

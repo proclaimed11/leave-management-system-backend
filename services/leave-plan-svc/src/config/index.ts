@@ -1,0 +1,5 @@
+export const CONFIG = {
+  LEAVE_PLAN_CONVERSION_WINDOW_DAYS: Number(
+    process.env.LEAVE_PLAN_CONVERSION_WINDOW_DAYS ?? 60
+  ),
+};

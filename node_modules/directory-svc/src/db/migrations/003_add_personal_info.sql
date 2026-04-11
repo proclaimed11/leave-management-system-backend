@@ -1,0 +1,23 @@
+ALTER TABLE employees
+ADD COLUMN IF NOT EXISTS phone TEXT;
+
+ALTER TABLE employees
+ADD COLUMN IF NOT EXISTS address TEXT;
+
+ALTER TABLE employees
+ADD COLUMN IF NOT EXISTS city TEXT;
+
+ALTER TABLE employees
+ADD COLUMN IF NOT EXISTS county TEXT;
+
+ALTER TABLE employees
+ADD COLUMN IF NOT EXISTS emergency_contact_name TEXT;
+
+ALTER TABLE employees
+ADD COLUMN IF NOT EXISTS emergency_contact_phone TEXT;
+
+ALTER TABLE employees
+ADD COLUMN IF NOT EXISTS marital_status TEXT;
+
+ALTER TABLE employees
+ADD COLUMN IF NOT EXISTS date_of_birth DATE;

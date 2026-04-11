@@ -1,0 +1,4 @@
+ALTER TABLE leave_types
+ADD COLUMN IF NOT EXISTS default_days INTEGER DEFAULT 0;
+
+

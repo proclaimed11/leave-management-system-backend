@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_jwt_1 = require("@libs/auth-jwt");
+const rbac_1 = require("@libs/rbac");
+const locationController_1 = require("../controllers/locationController");
+const loadDirectoryRole_1 = require("../middleware/loadDirectoryRole");
+const router = (0, express_1.Router)();
+router.get("/", auth_jwt_1.authMiddleware, loadDirectoryRole_1.loadDirectoryRole, rbac_1.hrOrAdmin, locationController_1.listLocations);
+exports.default = router;

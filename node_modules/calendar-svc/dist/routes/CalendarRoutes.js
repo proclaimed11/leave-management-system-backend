@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_jwt_1 = require("@libs/auth-jwt");
+const calendarController_1 = require("../controllers/calendarController");
+const router = (0, express_1.Router)();
+router.post("/rebuild", auth_jwt_1.authMiddleware, calendarController_1.rebuildCalendar);
+router.get("/:year_month", auth_jwt_1.authMiddleware, calendarController_1.getCalendarMonth);
+router.get("/conflicts/:department", auth_jwt_1.authMiddleware, calendarController_1.getDepartmentConflicts);
+router.get("/snapshots/:department", auth_jwt_1.authMiddleware, calendarController_1.getSnapshots);
+exports.default = router;

@@ -1,0 +1,5 @@
+export const CONFIG = {
+  DIRECTORY_SVC_URL: process.env.DIRECTORY_SVC_URL,
+  POLICY_SVC_URL: process.env.POLICY_SVC_URL,
+  NEGATIVE_BALANCE_FLOOR: Number(process.env.NEGATIVE_BALANCE_FLOOR ?? 0),
+};

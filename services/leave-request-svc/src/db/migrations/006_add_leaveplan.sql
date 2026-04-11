@@ -1,0 +1,2 @@
+ALTER TABLE leave_requests
+ADD COLUMN IF NOT EXISTS source_plan_id INTEGER NULL;

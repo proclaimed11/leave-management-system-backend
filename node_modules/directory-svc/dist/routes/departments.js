@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_jwt_1 = require("@libs/auth-jwt");
+const rbac_1 = require("@libs/rbac");
+const loadDirectoryRole_1 = require("../middleware/loadDirectoryRole");
+const departmentController_1 = require("../controllers/departmentController");
+const router = (0, express_1.Router)();
+router.get("/", auth_jwt_1.authMiddleware, loadDirectoryRole_1.loadDirectoryRole, rbac_1.hrOrAdmin, departmentController_1.listDepartments);
+router.post("/", auth_jwt_1.authMiddleware, loadDirectoryRole_1.loadDirectoryRole, rbac_1.hrOrAdmin, departmentController_1.createDepartment);
+router.get("/:dept_key", auth_jwt_1.authMiddleware, loadDirectoryRole_1.loadDirectoryRole, rbac_1.hrOrAdmin, departmentController_1.getDepartment);
+router.put("/:dept_key", auth_jwt_1.authMiddleware, loadDirectoryRole_1.loadDirectoryRole, rbac_1.hrOrAdmin, departmentController_1.updateDepartment);
+router.delete("/:dept_key", auth_jwt_1.authMiddleware, loadDirectoryRole_1.loadDirectoryRole, rbac_1.hrOrAdmin, departmentController_1.deleteDepartment);
+router.post("/:dept_key/head", auth_jwt_1.authMiddleware, loadDirectoryRole_1.loadDirectoryRole, rbac_1.hrOrAdmin, departmentController_1.setDepartmentHead);
+exports.default = router;

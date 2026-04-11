@@ -1,0 +1,22 @@
+{
+  "name": "calendar-svc",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "migrate": "ts-node src/db/runMigration.ts"
+  },
+  "dependencies": {
+     "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^24.10.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+
+     
+  }
+}
+
