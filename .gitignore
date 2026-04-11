@@ -1,0 +1,15 @@
+# Dependency folders
+node_modules/
+bin/
+obj/
+
+# Environment variables (Sensitive data)
+.env
+*.local
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
