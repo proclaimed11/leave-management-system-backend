@@ -93,7 +93,8 @@ export const loginWithSso = async (req: Request, res: Response) => {
 export const getMe = async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization || "";
-    const user = await engine.getCurrentUserFromAuthHeader(authHeader);
+    const jwtUser = await engine.getCurrentUserFromAuthHeader(authHeader);
+    const user = await engine.mergeMustChangePasswordFromDb(jwtUser);
 
     return res.json({
       message: "Authenticated user",
@@ -163,5 +164,33 @@ export const logoutAll = async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("Logout-all error:", err);
     return res.status(401).json({ error: err.message || "Logout-all failed" });
+  }
+};
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const currentUser = await engine.getCurrentUserFromAuthHeader(authHeader);
+
+    const current_password = String(req.body?.current_password ?? "");
+    const new_password = String(req.body?.new_password ?? "");
+
+    const result = await engine.changePassword(
+      currentUser.sub,
+      current_password,
+      new_password
+    );
+
+    return res.json({
+      message: "Password updated",
+      token: result.token,
+      refreshToken: result.refreshToken,
+      user: result.user,
+    });
+  } catch (err: any) {
+    const msg = String(err?.message ?? "Password change failed");
+    const status =
+      /incorrect|not available/i.test(msg) ? 401 : /at least 8/i.test(msg) ? 422 : 400;
+    return res.status(status).json({ error: msg });
   }
 };

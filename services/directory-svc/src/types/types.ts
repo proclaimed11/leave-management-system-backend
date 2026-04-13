@@ -16,6 +16,7 @@ export interface EmployeePersonal {
   emergency_contact_phone?: string | null;
   marital_status?: string | null;
   date_of_birth?: string | null;
+  avatar_url?: string | null;
 }
 
 export interface EmployeeFull extends EmployeeCore, EmployeePersonal {}
@@ -28,6 +29,9 @@ export interface EmployeeFilters {
   manager?: string;
   search?: string;
   company_key?: string;
+  /** Whitelisted in repository; invalid values fall back to `full_name`. */
+  sort_by?: string;
+  sort_dir?: "asc" | "desc";
 }
 export interface DepartmentRow {
   id: number;
@@ -62,6 +66,20 @@ export interface DepartmentSummary {
 }
 export interface DirectoryRole {
   role_key: string;
+  name: string;
+  description: string | null;
+}
+
+/** Row from `employment_types` (FK target for `employees.employment_type`). */
+export interface EmploymentType {
+  type_key: string;
+  name: string;
+  description: string | null;
+}
+
+/** Row from `countries` (FK target for `employees.country`). */
+export interface Country {
+  country_key: string;
   name: string;
   description: string | null;
 }
@@ -109,6 +127,8 @@ export interface Location {
   name: string;
   is_head_office: boolean;
   status: string;
+  /** UI grouping, e.g. Tanzania / Kenya / Uganda / Rwanda */
+  country_group: string;
 }
 
 export interface Gender {

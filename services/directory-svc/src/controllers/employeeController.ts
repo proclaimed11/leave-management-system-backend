@@ -5,6 +5,7 @@ import { EmployeeEngine } from "../services/employeeEngine";
 import { validateCreateEmployee } from "../validators/employeeValidator";
 
 import { RequestHandler } from "express";
+import { onboardIdentityUser } from "../services/identityClient";
 
 const engine = new EmployeeEngine();
 
@@ -15,11 +16,43 @@ export const createEmployee = async (
 ): Promise<any> => {
   try {
     const employee = await engine.createEmployee(req.body);
-    // const identityResult = await onboardIdentityUser(employee);
+
+    let temporary_password: string | undefined;
+    let identity_error: string | undefined;
+    let identity_skipped = false;
+    let identity_skip_reason: string | undefined;
+
+    const identityBase = process.env.IDENTITY_BASE_URL?.trim();
+    const serviceToken = process.env.SERVICE_AUTH_TOKEN?.trim();
+    if (identityBase && serviceToken) {
+      const identityResult = await onboardIdentityUser({
+        employee_number: employee.employee_number,
+        email: employee.email,
+      });
+      if (identityResult.user_created) {
+        temporary_password = identityResult.temporary_password;
+      } else {
+        const raw = identityResult.error;
+        identity_error =
+          typeof raw === "string"
+            ? raw
+            : raw && typeof raw === "object" && "error" in raw
+              ? String((raw as { error: unknown }).error)
+              : JSON.stringify(raw);
+      }
+    } else {
+      identity_skipped = true;
+      identity_skip_reason = !identityBase
+        ? "IDENTITY_BASE_URL is not set on directory-svc — LMS users are not auto-provisioned."
+        : "SERVICE_AUTH_TOKEN is not set on directory-svc — cannot call identity-svc.";
+    }
 
     return res.json({
       message: "Employee created",
       employee,
+      ...(temporary_password ? { temporary_password } : {}),
+      ...(identity_error ? { identity_error } : {}),
+      ...(identity_skipped ? { identity_skipped: true, identity_skip_reason } : {}),
     });
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
@@ -31,6 +64,10 @@ export const listEmployees: RequestHandler = async (req, res) => {
     const page = req.query.page ? Number(req.query.page) : 1;
     const limit = req.query.limit ? Number(req.query.limit) : 25;
 
+    const sortDirRaw = (req.query.sort_dir as string | undefined)?.toLowerCase();
+    const sort_dir =
+      sortDirRaw === "desc" ? ("desc" as const) : sortDirRaw === "asc" ? ("asc" as const) : undefined;
+
     const filters = {
       page,
       limit,
@@ -39,6 +76,8 @@ export const listEmployees: RequestHandler = async (req, res) => {
       manager: req.query.manager as string | undefined,
       search: req.query.search as string | undefined,
       company_key: req.query.company_key as string | undefined,
+      sort_by: req.query.sort_by as string | undefined,
+      sort_dir,
     };
 
     const result = await engine.listEmployees(filters);

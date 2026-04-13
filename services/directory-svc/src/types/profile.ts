@@ -9,6 +9,7 @@ export interface EmployeeProfile {
   directory_role: string;
   company_key: string;
   status: string;
+  avatar_url: string | null;
 
   phone: string | null;
   address: string | null;

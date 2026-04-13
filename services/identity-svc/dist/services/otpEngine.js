@@ -76,6 +76,7 @@ class OtpEngine {
                 email: normalizedEmail,
                 employee_number: employee.employee_number,
                 password_hash: "",
+                must_change_password: false,
             });
         }
         else {
@@ -89,6 +90,7 @@ class OtpEngine {
             email: user.email,
             employee_number: employee.employee_number,
             is_system_admin: isSystemAdmin,
+            must_change_password: Boolean(user.must_change_password),
         };
         const token = (0, jwt_1.signJwt)(jwtPayload);
         const refreshToken = (0, jwt_1.signRefreshToken)({ user_id: user.id });
@@ -102,6 +104,7 @@ class OtpEngine {
                 employee_number: employee.employee_number, // Use fresh data here too
                 directory_role: directoryRole,
                 is_system_admin: isSystemAdmin,
+                must_change_password: Boolean(user.must_change_password),
             },
         };
     }

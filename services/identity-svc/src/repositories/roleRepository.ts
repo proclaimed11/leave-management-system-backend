@@ -29,7 +29,7 @@ export class RoleRepository {
          WHEN 'employee' THEN 1
          WHEN 'supervisor' THEN 2
          WHEN 'hod' THEN 3
-         WHEN 'hr' THEN 4
+         WHEN 'HR' THEN 4
          WHEN 'management' THEN 5
          WHEN 'admin' THEN 6
          WHEN 'consultant' THEN 7

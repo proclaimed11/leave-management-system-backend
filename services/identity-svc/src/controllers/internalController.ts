@@ -1,33 +1,77 @@
-// import { Request, Response } from "express";
-// import { IdentityEngine } from "../services/identityEngine";
-// import { CONFIG } from "../utils/config";
+import { Request, Response } from "express";
+import { IdentityEngine } from "../services/identityEngine";
+import { CONFIG } from "../utils/config";
 
-// const engine = new IdentityEngine();
+const engine = new IdentityEngine();
 
-// export const provisionUser = async (req: Request, res: Response) => {
-//   try {
-//     const token = req.headers["x-service-auth"];
+function assertServiceAuth(req: Request): boolean {
+  const raw = req.headers["x-service-auth"];
+  const incoming = typeof raw === "string" ? raw.trim() : "";
+  const expected = String(CONFIG.SERVICE_AUTH_TOKEN ?? "").trim();
+  return Boolean(incoming) && incoming === expected;
+}
 
-//     if (token !== CONFIG.SERVICE_AUTH_TOKEN) {
-//       return res.status(403).json({ error: "Forbidden" });
-//     }
+/**
+ * POST /auth/internal/provision-user
+ * Called by directory-svc when an employee is created (X-Service-Auth).
+ */
+export const provisionUser = async (req: Request, res: Response) => {
+  try {
+    if (!assertServiceAuth(req)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
-//     const { email, employee_number, initial_roles } = req.body;
+    const body = req.body ?? {};
+    const email = String(body.email ?? "").trim();
+    const employee_number = String(body.employee_number ?? "").trim();
 
-//     const result = await engine.registerLocalUser({
-//       employee_number,
-//       email,
-//       password: crypto.randomUUID().slice(0, 8),
-//       initial_roles: initial_roles ?? "employee",
-//     });
+    const result = await engine.provisionUserFromDirectory({
+      employee_number,
+      email,
+    });
 
-//     return res.status(201).json({
-//       message: "User provisioned",
-//       user: result.user,
-//       role: result.role
-//     });
+    return res.status(201).json({
+      message: "User provisioned",
+      user: result.user,
+      temporary_password: result.temporary_password,
+      user_created: true,
+    });
+  } catch (err: any) {
+    const msg = String(err?.message ?? "Provision failed");
+    const status =
+      /already exists/i.test(msg) ? 409 : /required/i.test(msg) ? 422 : 400;
+    return res.status(status).json({ error: msg, user_created: false });
+  }
+};
 
-//   } catch (err: any) {
-//     return res.status(400).json({ error: err.message });
-//   }
-// };
+/**
+ * POST /auth/internal/delete-user-for-employee
+ * Called by directory-svc after permanently deleting an archived employee.
+ */
+export const deleteUserForDirectoryEmployee = async (req: Request, res: Response) => {
+  try {
+    if (!assertServiceAuth(req)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const body = req.body ?? {};
+    const email = String(body.email ?? "").trim();
+    const employee_number = String(body.employee_number ?? "").trim();
+
+    const result = await engine.deleteUserByDirectoryHandoff({
+      email,
+      employee_number,
+    });
+
+    return res.json({
+      message: result.deleted
+        ? "Identity user deleted"
+        : "No matching identity user",
+      deleted: result.deleted,
+    });
+  } catch (err: any) {
+    const msg = String(err?.message ?? "Delete failed");
+    const status = /required|Refusing/i.test(msg) ? 422 : 400;
+    return res.status(status).json({ error: msg });
+  }
+};

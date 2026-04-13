@@ -19,3 +19,37 @@ export const archiveEmployee: RequestHandler = async (req, res) => {
     });
   }
 };
+
+export const restoreEmployee: RequestHandler = async (req, res) => {
+  try {
+    const { employee_number } = req.params;
+
+    const result = await service.restore(employee_number as string);
+
+    res.json({
+      message: "Employee restored successfully",
+      ...result,
+    });
+  } catch (err: any) {
+    res.status(400).json({
+      error: err.message,
+    });
+  }
+};
+
+export const permanentDeleteEmployee: RequestHandler = async (req, res) => {
+  try {
+    const { employee_number } = req.params;
+
+    const result = await service.deletePermanently(employee_number as string);
+
+    res.json({
+      message: "Employee permanently deleted",
+      ...result,
+    });
+  } catch (err: any) {
+    res.status(400).json({
+      error: err.message,
+    });
+  }
+};

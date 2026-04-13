@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmployeeRepository = void 0;
 const connection_1 = require("../db/connection");
+const avatarFileCleanup_1 = require("../utils/avatarFileCleanup");
 class EmployeeRepository {
     async createEmployee(data) {
         const fields = [
@@ -19,6 +20,9 @@ class EmployeeRepository {
             "marital_status",
             "gender",
             "date_of_birth",
+            "employment_type",
+            "hire_date",
+            "country",
         ];
         const values = fields.map((f) => data[f] ?? null);
         const placeholders = fields.map((_, i) => `$${i + 1}`).join(",");
@@ -38,8 +42,21 @@ class EmployeeRepository {
         return result.rows[0] ?? null;
     }
     async listEmployees(filters) {
-        const { page = 1, limit = 5, department, status, manager, search, company_key, } = filters;
+        const { page = 1, limit = 5, department, status, manager, search, company_key, sort_by, sort_dir, } = filters;
         const offset = (page - 1) * limit;
+        const SORT_COLUMNS = {
+            employee_number: "employee_number",
+            full_name: "full_name",
+            email: "email",
+            department: "department",
+            title: "title",
+            directory_role: "directory_role",
+            status: "status",
+            location: "location",
+            company_key: "company_key",
+        };
+        const sortCol = sort_by && SORT_COLUMNS[sort_by] ? SORT_COLUMNS[sort_by] : "full_name";
+        const sortOrder = sort_dir?.toLowerCase() === "desc" ? "DESC" : "ASC";
         let where = `WHERE 1=1`;
         const params = [];
         if (department) {
@@ -54,9 +71,12 @@ class EmployeeRepository {
             params.push(manager);
             where += ` AND manager_employee_number = $${params.length}`;
         }
-        if (search) {
-            params.push(`%${search}%`);
-            where += ` AND (full_name ILIKE $${params.length} OR email ILIKE $${params.length})`;
+        const searchTerm = typeof search === "string" ? search.trim() : "";
+        if (searchTerm) {
+            const pattern = `%${searchTerm}%`;
+            params.push(pattern);
+            const p = params.length;
+            where += ` AND (full_name ILIKE $${p} OR email ILIKE $${p} OR employee_number ILIKE $${p})`;
         }
         if (company_key) {
             params.push(company_key);
@@ -79,7 +99,7 @@ class EmployeeRepository {
         employee_number, full_name, email, department, title, status, directory_role, company_key,location
       FROM employees
       ${where}
-      ORDER BY full_name ASC
+      ORDER BY ${sortCol} ${sortOrder}
       LIMIT $${params.length - 1} OFFSET $${params.length}
     `;
         const result = await connection_1.pool.query(query, params);
@@ -177,7 +197,12 @@ class EmployeeRepository {
         return result.rows;
     }
     async countSubordinates(managerId) {
-        const result = await connection_1.pool.query(`SELECT COUNT(*) AS count FROM employees WHERE manager_employee_number = $1`, [managerId]);
+        const result = await connection_1.pool.query(`
+      SELECT COUNT(*) AS count
+      FROM employees
+      WHERE manager_employee_number = $1
+        AND status = 'ACTIVE'
+      `, [managerId]);
         return Number(result.rows[0].count);
     }
     async existsEmployeeNumber(empNo) {
@@ -209,6 +234,71 @@ class EmployeeRepository {
     RETURNING employee_number, status, termination_date
     `, [employeeNumber]);
         return result.rows[0] ?? null;
+    }
+    async updateAvatarUrl(employeeNumber, avatarUrl) {
+        const result = await connection_1.pool.query(`
+      UPDATE employees
+      SET avatar_url = $1
+      WHERE employee_number = $2
+      RETURNING *
+      `, [avatarUrl, employeeNumber]);
+        return result.rows[0] ?? null;
+    }
+    async restoreEmployee(employeeNumber) {
+        const result = await connection_1.pool.query(`
+    UPDATE employees
+    SET
+      status = 'ACTIVE',
+      termination_date = NULL
+    WHERE employee_number = $1 AND status = 'ARCHIVED'
+    RETURNING employee_number, status
+    `, [employeeNumber]);
+        return result.rows[0] ?? null;
+    }
+    /**
+     * Hard-delete an archived employee. Clears directory references (dept head, managers)
+     * then removes the row. Only succeeds when status is ARCHIVED.
+     * Returns identity keys so directory-svc can remove the matching LMS user.
+     */
+    async permanentlyDeleteEmployee(employeeNumber) {
+        const client = await connection_1.pool.connect();
+        try {
+            await client.query("BEGIN");
+            const sel = await client.query(`SELECT avatar_url, email, employee_number FROM employees WHERE employee_number = $1 AND status = $2`, [employeeNumber, "ARCHIVED"]);
+            if (sel.rowCount === 0) {
+                await client.query("ROLLBACK");
+                return { ok: false };
+            }
+            const oldAvatar = sel.rows[0].avatar_url;
+            const identityEmail = sel.rows[0].email;
+            const identityEmpNo = sel.rows[0].employee_number;
+            await client.query(`UPDATE departments SET head_employee_number = NULL WHERE head_employee_number = $1`, [employeeNumber]);
+            await client.query(`UPDATE employees SET manager_employee_number = NULL WHERE manager_employee_number = $1`, [employeeNumber]);
+            const del = await client.query(`DELETE FROM employees WHERE employee_number = $1 AND status = $2`, [employeeNumber, "ARCHIVED"]);
+            if (del.rowCount === 0) {
+                await client.query("ROLLBACK");
+                return { ok: false };
+            }
+            await client.query("COMMIT");
+            (0, avatarFileCleanup_1.tryRemoveStoredAvatar)(oldAvatar);
+            return {
+                ok: true,
+                email: identityEmail,
+                employee_number: identityEmpNo,
+            };
+        }
+        catch (err) {
+            try {
+                await client.query("ROLLBACK");
+            }
+            catch {
+                /* ignore */
+            }
+            throw err;
+        }
+        finally {
+            client.release();
+        }
     }
     async findActiveByDepartmentExcluding(department, excludeEmpNo) {
         const r = await connection_1.pool.query(`

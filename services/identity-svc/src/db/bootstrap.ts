@@ -3,6 +3,7 @@ import path from "path";
 import { Client } from "pg";
 import { pool } from "./connection";
 import { CONFIG } from "../utils/config";
+import { seedDefaultAdmin } from "./seedDefaultAdmin";
 
 type MigrationRow = {
   filename: string;
@@ -98,4 +99,5 @@ export async function runPendingMigrations(): Promise<void> {
 export async function bootstrapDatabase(): Promise<void> {
   await ensureDatabaseExists();
   await runPendingMigrations();
+  await seedDefaultAdmin();
 }

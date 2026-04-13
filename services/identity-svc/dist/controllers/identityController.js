@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logoutAll = exports.logout = exports.refreshToken = exports.getMe = exports.loginWithSso = exports.login = exports.registerUser = void 0;
+exports.changePassword = exports.logoutAll = exports.logout = exports.refreshToken = exports.getMe = exports.loginWithSso = exports.login = exports.registerUser = void 0;
 const identityEngine_1 = require("../services/identityEngine");
 const authValidator_1 = require("../validators/authValidator");
 const engine = new identityEngine_1.IdentityEngine();
@@ -86,7 +86,8 @@ exports.loginWithSso = loginWithSso;
 const getMe = async (req, res) => {
     try {
         const authHeader = req.headers.authorization || "";
-        const user = await engine.getCurrentUserFromAuthHeader(authHeader);
+        const jwtUser = await engine.getCurrentUserFromAuthHeader(authHeader);
+        const user = await engine.mergeMustChangePasswordFromDb(jwtUser);
         return res.json({
             message: "Authenticated user",
             user,
@@ -154,3 +155,24 @@ const logoutAll = async (req, res) => {
     }
 };
 exports.logoutAll = logoutAll;
+const changePassword = async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization || "";
+        const currentUser = await engine.getCurrentUserFromAuthHeader(authHeader);
+        const current_password = String(req.body?.current_password ?? "");
+        const new_password = String(req.body?.new_password ?? "");
+        const result = await engine.changePassword(currentUser.sub, current_password, new_password);
+        return res.json({
+            message: "Password updated",
+            token: result.token,
+            refreshToken: result.refreshToken,
+            user: result.user,
+        });
+    }
+    catch (err) {
+        const msg = String(err?.message ?? "Password change failed");
+        const status = /incorrect|not available/i.test(msg) ? 401 : /at least 8/i.test(msg) ? 422 : 400;
+        return res.status(status).json({ error: msg });
+    }
+};
+exports.changePassword = changePassword;

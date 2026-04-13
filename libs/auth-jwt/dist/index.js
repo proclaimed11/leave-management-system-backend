@@ -6,15 +6,31 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.authMiddleware = exports.requireRole = exports.requireAuth = exports.verifyToken = exports.signToken = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const JWT_SECRET = process.env.JWT_SECRET || "esl_default_jwt_secret";
+/** When set, identity-svc signs access tokens with RS256 — must match identity’s public key. */
+const JWT_PUBLIC_KEY = process.env.JWT_PUBLIC_KEY?.trim();
 const JWT_EXPIRES = process.env.JWT_EXPIRES || "1d";
 const signToken = (payload, secret = JWT_SECRET, expiresIn = JWT_EXPIRES) => {
     const options = { expiresIn: expiresIn };
     return jsonwebtoken_1.default.sign(payload, secret, options);
 };
 exports.signToken = signToken;
+/**
+ * Verify an access token from identity-svc.
+ * - If `JWT_PUBLIC_KEY` is set → RS256 (same as identity when using keypair).
+ * - Otherwise → HS256 with `JWT_SECRET` (must match identity `JWT_SECRET`).
+ */
 const verifyToken = (token, secret = JWT_SECRET) => {
     try {
-        const decoded = jsonwebtoken_1.default.verify(token, secret);
+        const useRs256 = Boolean(JWT_PUBLIC_KEY) && secret === JWT_SECRET;
+        if (useRs256) {
+            const decoded = jsonwebtoken_1.default.verify(token, JWT_PUBLIC_KEY, {
+                algorithms: ["RS256"],
+            });
+            return decoded;
+        }
+        const decoded = jsonwebtoken_1.default.verify(token, secret, {
+            algorithms: ["HS256"],
+        });
         return decoded;
     }
     catch (err) {

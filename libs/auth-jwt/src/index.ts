@@ -1,8 +1,9 @@
 import jwt, { SignOptions } from "jsonwebtoken";
 import { RequestHandler } from "express";
 
-
 const JWT_SECRET = process.env.JWT_SECRET || "esl_default_jwt_secret";
+/** When set, identity-svc signs access tokens with RS256 — must match identity’s public key. */
+const JWT_PUBLIC_KEY = process.env.JWT_PUBLIC_KEY?.trim();
 const JWT_EXPIRES = process.env.JWT_EXPIRES || "1d";
 
 export interface UserPayload {
@@ -10,6 +11,10 @@ export interface UserPayload {
   employee_number: string;
   email: string;
   role: string;
+  /** Identity access tokens may carry these instead of legacy fields. */
+  sub?: number;
+  is_system_admin?: boolean;
+  must_change_password?: boolean;
 }
 
 export const signToken = (
@@ -21,11 +26,26 @@ export const signToken = (
   return jwt.sign(payload, secret, options);
 };
 
-
-
+/**
+ * Verify an access token from identity-svc.
+ * - If `JWT_PUBLIC_KEY` is set → RS256 (same as identity when using keypair).
+ * - Otherwise → HS256 with `JWT_SECRET` (must match identity `JWT_SECRET`).
+ */
 export const verifyToken = (token: string, secret: string = JWT_SECRET): UserPayload => {
   try {
-    const decoded = jwt.verify(token, secret) as UserPayload;
+    const useRs256 =
+      Boolean(JWT_PUBLIC_KEY) && secret === JWT_SECRET;
+
+    if (useRs256) {
+      const decoded = jwt.verify(token, JWT_PUBLIC_KEY as string, {
+        algorithms: ["RS256"],
+      }) as UserPayload;
+      return decoded;
+    }
+
+    const decoded = jwt.verify(token, secret, {
+      algorithms: ["HS256"],
+    }) as UserPayload;
     return decoded;
   } catch (err: any) {
     throw err;

@@ -5,7 +5,7 @@ export class LocationRepository {
   async listActive(): Promise<Location[]> {
     const result = await pool.query(
       `
-      SELECT location_key, name, is_head_office, status
+      SELECT location_key, name, is_head_office, status, country_group
       FROM locations
       WHERE status = 'ACTIVE'
       ORDER BY is_head_office DESC, name ASC

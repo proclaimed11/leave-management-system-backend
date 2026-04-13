@@ -5,6 +5,7 @@ import { RefreshTokenRepository } from "../repositories/refreshTokenRepository";
 import { sendOtpEmail } from "../utils/sendOtpEmail";
 import { getDirectoryEmployee } from "../client/directoryClient";
 import { signJwt, signRefreshToken } from "../utils/jwt";
+import type { JwtUser } from "../types/types";
 
 const OTP_EXPIRY_MINUTES = 15;
 const MAX_ATTEMPTS = 5;
@@ -81,6 +82,7 @@ export class OtpEngine {
       email: normalizedEmail,
       employee_number: employee.employee_number,
       password_hash: "",
+      must_change_password: false,
     });
   } else {
     user = await this.users.update(user.id, {
@@ -90,11 +92,12 @@ export class OtpEngine {
   
   const isSystemAdmin = false;
 
-  const jwtPayload = {
+  const jwtPayload: JwtUser = {
     sub: user.id,
     email: user.email,
-    employee_number: employee.employee_number, 
+    employee_number: employee.employee_number,
     is_system_admin: isSystemAdmin,
+    must_change_password: Boolean(user.must_change_password),
   };
 
   const token = signJwt(jwtPayload);
@@ -115,6 +118,7 @@ export class OtpEngine {
       employee_number: employee.employee_number, // Use fresh data here too
       directory_role: directoryRole,
       is_system_admin: isSystemAdmin,
+      must_change_password: Boolean(user.must_change_password),
     },
   };
 }

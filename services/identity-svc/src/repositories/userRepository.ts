@@ -33,14 +33,16 @@ export class UserRepository {
     employee_number: string | null;
     email: string;
     password_hash: string;
+    must_change_password?: boolean;
   }): Promise<UserRow> {
-    const r = await pool.query(
+    const mustChange = params.must_change_password === true;
+    const r = await pool.query<UserRow>(
       `
-      INSERT INTO users (employee_number, email, password_hash)
-      VALUES ($1, $2, $3)
-      RETURNING id, employee_number, email, password_hash, created_at
+      INSERT INTO users (employee_number, email, password_hash, must_change_password)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
       `,
-      [params.employee_number, params.email, params.password_hash]
+      [params.employee_number, params.email, params.password_hash, mustChange]
     );
 
     return r.rows[0];
@@ -49,6 +51,7 @@ export class UserRepository {
     id: number,
     params: Partial<Pick<UserRow, "employee_number" | "email" | "is_active">> & {
       password_hash?: string;
+      must_change_password?: boolean;
     }
   ): Promise<UserRow> {
     const fields: string[] = [];
@@ -68,6 +71,11 @@ export class UserRepository {
     if (params.password_hash !== undefined) {
       fields.push(`password_hash = $${i++}`);
       values.push(params.password_hash);
+    }
+
+    if (params.must_change_password !== undefined) {
+      fields.push(`must_change_password = $${i++}`);
+      values.push(params.must_change_password);
     }
 
     if (params.is_active !== undefined) {
@@ -98,5 +106,25 @@ export class UserRepository {
   }
   async deactivate(id: number): Promise<void> {
     await pool.query(`UPDATE users SET is_active = FALSE WHERE id = $1`, [id]);
+  }
+
+  /**
+   * Hard-delete a user provisioned from directory (matching email + employee_number).
+   * Refresh tokens and user_roles rows are removed via ON DELETE CASCADE.
+   */
+  async deleteByEmailAndEmployeeNumber(
+    email: string,
+    employeeNumber: string
+  ): Promise<boolean> {
+    const r = await pool.query(
+      `
+      DELETE FROM users
+      WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))
+        AND UPPER(TRIM(COALESCE(employee_number, ''))) = UPPER(TRIM($2))
+      RETURNING id
+      `,
+      [email, employeeNumber]
+    );
+    return (r.rowCount ?? 0) > 0;
   }
 }

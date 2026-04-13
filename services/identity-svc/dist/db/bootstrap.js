@@ -11,6 +11,7 @@ const path_1 = __importDefault(require("path"));
 const pg_1 = require("pg");
 const connection_1 = require("./connection");
 const config_1 = require("../utils/config");
+const seedDefaultAdmin_1 = require("./seedDefaultAdmin");
 function parseBool(value, fallback) {
     if (value === undefined)
         return fallback;
@@ -82,4 +83,5 @@ async function runPendingMigrations() {
 async function bootstrapDatabase() {
     await ensureDatabaseExists();
     await runPendingMigrations();
+    await (0, seedDefaultAdmin_1.seedDefaultAdmin)();
 }

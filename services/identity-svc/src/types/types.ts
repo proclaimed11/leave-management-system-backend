@@ -6,6 +6,7 @@ export interface UserRow {
   employee_number: string | null;
   email: string;
   password_hash: string | null;// null for SSO-only accounts
+  must_change_password: boolean;
   is_active: "active";
   created_at: string; // ISO
   updated_at: string; // ISO
@@ -13,7 +14,7 @@ export interface UserRow {
 
 export interface RoleRow {
   id: number;
-  role_key: "employee" | "supervisor" | "hod" | "hr" | "admin" | "management" | "consultant";
+  role_key: "employee" | "supervisor" | "hod" | "HR" | "admin" | "management" | "consultant";
   description: string | null;
 }
 
@@ -29,6 +30,8 @@ export interface JwtUser {
   email: string;
   employee_number: string | null;
   is_system_admin: boolean;
+  /** Omitted on legacy tokens; treat undefined as false. */
+  must_change_password?: boolean;
 }
 
 
@@ -58,5 +61,6 @@ export type LoginResult = {
     employee_number: string | null;
     email: string;
     is_system_admin: boolean;
+    must_change_password: boolean;
   };
 };

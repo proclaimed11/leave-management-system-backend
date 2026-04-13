@@ -1,4 +1,9 @@
+import "dotenv/config";
+import express from "express";
+import path from "path";
+
 import { makeApp, errorHandler } from "@libs/common-express";
+import { UPLOAD_ROOT, ensureAvatarDir } from "./config/uploadPaths";
 import { bootstrapDatabase } from "./db/bootstrap";
 import employeeRoutes from "./routes/employee";
 import internalroutes from "./routes/internal"
@@ -10,10 +15,20 @@ import locationRoutes from "./routes/locationRoutes";
 import maritalStatusRoutes from "./routes/maritalStatusRoutes";
 import genderRoutes from "./routes/genderRoutes";
 import companyRoutes from "./routes/companyRoutes";
+import employmentTypeRoutes from "./routes/employmentTypeRoutes";
+import countryRoutes from "./routes/countryRoutes";
 import profileRoutes from "./routes/profileRoutes";
 
 
 const app = makeApp();
+
+ensureAvatarDir();
+app.use(
+  "/uploads",
+  express.static(path.resolve(UPLOAD_ROOT), {
+    maxAge: process.env.NODE_ENV === "production" ? 7 * 24 * 60 * 60 * 1000 : 0,
+  }) as Parameters<typeof app.use>[1]
+);
 
 // Base routes
 app.use("/employees", employeeRoutes as any);
@@ -26,13 +41,15 @@ app.use("/locations", locationRoutes as any);
 app.use("/genders", genderRoutes as any);
 app.use("/marital-statuses", maritalStatusRoutes as any);
 app.use("/companies", companyRoutes as any);
+app.use("/employment-types", employmentTypeRoutes as any);
+app.use("/countries", countryRoutes as any);
 app.use("/profile", profileRoutes  as any);
 
 
 // Global error handler
 app.use(errorHandler);
 
-const PORT = 3002;
+const PORT = Number(process.env.PORT) || 3002;
 
 async function start() {
   try {

@@ -5,7 +5,7 @@ const connection_1 = require("../db/connection");
 class LocationRepository {
     async listActive() {
         const result = await connection_1.pool.query(`
-      SELECT location_key, name, is_head_office, status
+      SELECT location_key, name, is_head_office, status, country_group
       FROM locations
       WHERE status = 'ACTIVE'
       ORDER BY is_head_office DESC, name ASC
