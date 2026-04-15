@@ -27,6 +27,8 @@ export class ApplyLeaveEngine {
         available_days: rule.deduct_from_balance
           ? ent?.remaining_days ?? 0
           : null, // unpaid / unlimited
+        max_consecutive_days: rule.max_consecutive_days ?? null,
+        max_per_year: rule.max_per_year ?? null,
 
         requires_document: Boolean(
           rule.requires_document || rule.attachment_required_after_days

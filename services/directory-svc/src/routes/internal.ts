@@ -32,6 +32,11 @@ router.post(
   internalOnly,
   Internal.getEmployeesByNumbers
 );
+router.post(
+  "/seed-upsert-employee",
+  internalOnly,
+  Internal.seedUpsertEmployee
+);
 
 router.get("/:manager_id/subordinates", mgr.getSubordinates);
 

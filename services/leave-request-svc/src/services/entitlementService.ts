@@ -22,6 +22,18 @@ export async function getEntitlements(employeeNumber: string) {
   return r.data.entitlements ?? [];
 }
 
+export async function generateEntitlementsForOne(employeeNumber: string) {
+  const res = await axios.post(
+    `${CONFIG.ENTITLEMENT_SVC_URL}/internal/entitlements/generate-for-one`,
+    { employee_number: employeeNumber },
+    {
+      headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY! },
+    }
+  );
+
+  return res.data;
+}
+
 export async function deductEntitlement(payload: DeductPayload) {
   const { ...data } = payload;
   const res = await axios.post(

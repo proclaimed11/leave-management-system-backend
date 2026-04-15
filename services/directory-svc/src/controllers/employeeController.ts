@@ -61,6 +61,12 @@ export const createEmployee = async (
 
 export const listEmployees: RequestHandler = async (req, res) => {
   try {
+    const scope = (req as any).employee_visibility_scope as
+      | { mode: "all" }
+      | { mode: "none" }
+      | { mode: "location"; location_prefix: string }
+      | { mode: "location_department"; location_prefix: string; department: string }
+      | undefined;
     const page = req.query.page ? Number(req.query.page) : 1;
     const limit = req.query.limit ? Number(req.query.limit) : 25;
 
@@ -78,7 +84,26 @@ export const listEmployees: RequestHandler = async (req, res) => {
       company_key: req.query.company_key as string | undefined,
       sort_by: req.query.sort_by as string | undefined,
       sort_dir,
+      location_prefix: undefined as string | undefined,
+      strict_department: undefined as string | undefined,
     };
+
+    if (!scope || scope.mode === "none") {
+      return res.json({
+        page,
+        limit,
+        count: 0,
+        total: 0,
+        total_pages: 0,
+        employees: [],
+      });
+    }
+    if (scope.mode === "location" || scope.mode === "location_department") {
+      filters.location_prefix = scope.location_prefix;
+    }
+    if (scope.mode === "location_department") {
+      filters.strict_department = scope.department;
+    }
 
     const result = await engine.listEmployees(filters);
     res.json(result);
@@ -120,11 +145,35 @@ export const updateEmployee: RequestHandler = async (req, res) => {
 };
 
 export const getEmployeeById: RequestHandler = async (req, res) => {
+  const scope = (req as any).employee_visibility_scope as
+    | { mode: "all" }
+    | { mode: "none" }
+    | { mode: "location"; location_prefix: string }
+    | { mode: "location_department"; location_prefix: string; department: string }
+    | undefined;
   const emp = await engine.getById(req.params.employee_number as string);
 
   if (!emp) {
     res.status(404).json({ error: "Not found" });
     return;
+  }
+
+  if (!scope || scope.mode === "none") {
+    res.status(403).json({ error: "Forbidden: not allowed to view users table" });
+    return;
+  }
+  if (scope.mode !== "all") {
+    const targetPrefix = String(emp.location ?? "").toUpperCase().split("_")[0]?.trim();
+    if (!targetPrefix || targetPrefix !== scope.location_prefix) {
+      res.status(403).json({ error: "Forbidden: cross-location access denied" });
+      return;
+    }
+    if (scope.mode === "location_department") {
+      if (String(emp.department ?? "").trim() !== scope.department) {
+        res.status(403).json({ error: "Forbidden: cross-department access denied" });
+        return;
+      }
+    }
   }
 
   res.json(emp);

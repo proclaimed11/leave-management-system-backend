@@ -2,7 +2,7 @@ import { pool } from "./connection";
 import fs from "fs";
 import path from "path";
 
-export const runMigration = async () => {
+export const runMigration = async (closePool = true) => {
   try {
     console.log("🔗 Connecting to DB...");
     console.log("Host:", process.env.DB_HOST);
@@ -21,9 +21,14 @@ export const runMigration = async () => {
     console.log("✅ All migrations completed");
   } catch (err) {
     console.error("Migration failed", err);
+    throw err;
   } finally {
-    pool.end();
+    if (closePool) {
+      await pool.end();
+    }
   }
 };
 
-runMigration();
+if (require.main === module) {
+  void runMigration();
+}

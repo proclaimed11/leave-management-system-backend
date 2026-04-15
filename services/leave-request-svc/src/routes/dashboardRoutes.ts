@@ -10,30 +10,34 @@ import { loadDirectoryRole } from "../middleware/loadDirectoryRole";
 import { staffOnly, managerOnly, hrOrAdmin } from "@libs/rbac";
 
 const router = Router();
+const auth = authMiddleware as any;
+const staff = staffOnly as any;
+const manager = managerOnly as any;
+const hrAdmin = hrOrAdmin as any;
 
-router.get("/me", authMiddleware, loadDirectoryRole, staffOnly, getMyDashboard);
+router.get("/me", auth, loadDirectoryRole, staff, getMyDashboard);
 
 router.get(
   "/manager/summary",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  managerOnly,
+  manager,
   getManagerDashboard
 );
 
 router.get(
   "/hr/summary",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  hrOrAdmin,
+  hrAdmin,
   getHrDashboard
 );
 
 router.get(
   "/manager/team-leaves",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  managerOnly,
+  manager,
   getManagerTeamLeaves
 );
 

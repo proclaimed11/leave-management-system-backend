@@ -19,51 +19,53 @@ import {
 } from "../controllers/openingBalanceController";
 
 const router = Router();
+const auth = authMiddleware as any;
+const hrAdmin = hrOrAdmin as any;
 const upload = multer();
 
-router.get("/me", authMiddleware, getMyEntitlements);
+router.get("/me", auth, getMyEntitlements);
 
 // Generate for all employees (HR/Admin)
-router.post("/generate", authMiddleware, loadDirectoryRole, hrOrAdmin, generateAllEntitlements);
+router.post("/generate", auth, loadDirectoryRole, hrAdmin, generateAllEntitlements);
 router.post(
   "/generate-one",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  hrOrAdmin,
+  hrAdmin,
   generateEntitlementsForOne
 );
 
 router.post(
   "/opening-balance/preview",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  hrOrAdmin,
+  hrAdmin,
   upload.single("file"),
   previewOpeningBalance
 );
 
 router.post(
   "/opening-balance/commit",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  hrOrAdmin,
+  hrAdmin,
   upload.single("file"),
   commitOpeningBalance
 );
 
 // Adjustments
-router.post("/adjust-balance", authMiddleware, loadDirectoryRole, hrOrAdmin, adjustLeaveBalance);
+router.post("/adjust-balance", auth, loadDirectoryRole, hrAdmin, adjustLeaveBalance);
 
 // Comp-off + yearly reset
-router.post("/comp-off", authMiddleware, loadDirectoryRole, hrOrAdmin, recordCompOffEarned);
-router.post("/yearly-reset", authMiddleware, loadDirectoryRole, hrOrAdmin, resetYearEntitlements);
+router.post("/comp-off", auth, loadDirectoryRole, hrAdmin, recordCompOffEarned);
+router.post("/yearly-reset", auth, loadDirectoryRole, hrAdmin, resetYearEntitlements);
 router.get(
   "/history/:employee_number",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  hrOrAdmin,
+  hrAdmin,
   getEntitlementHistory
 );
 
-router.get("/:employee_number", authMiddleware, loadDirectoryRole, hrOrAdmin, getEmployeeEntitlements);
+router.get("/:employee_number", auth, loadDirectoryRole, hrAdmin, getEmployeeEntitlements);
 export default router;

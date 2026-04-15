@@ -16,41 +16,43 @@ import {
 } from "../controllers/handoverController";
 
 const router = Router();
+const auth = authMiddleware as any;
+const staff = staffOnly as any;
 router.get(
   "/candidates",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  staffOnly,
+  staff,
   getHandoverOptions
 );
-router.get("/my-tasks", authMiddleware, getMyHandoverTasks);
+router.get("/my-tasks", auth, getMyHandoverTasks);
 router.get(
   "/received",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  staffOnly,
+  staff,
   getMyReceivedHandovers
 );
 
 router.get(
   "/:handover_id",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  staffOnly,
+  staff,
   getHandoverDetails
 );
 router.patch(
   "/task/:task_id/complete",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  staffOnly,
+  staff,
   completeHandoverTask
 );
 
-router.post("/:request_id/tasks", authMiddleware, addHandoverTask);
+router.post("/:request_id/tasks", auth, addHandoverTask);
 
-router.get("/:request_id/tasks", authMiddleware, getHandoverTasks);
+router.get("/:request_id/tasks", auth, getHandoverTasks);
 
-router.patch("/task/:task_id", authMiddleware, updateTaskStatus);
+router.patch("/task/:task_id", auth, updateTaskStatus);
 
 export default router;

@@ -27,8 +27,10 @@ export interface ApprovalEmployee {
   employee_number: string;
   role: EmployeeRole;
   reports_to: string | null;
-  department_id: number | null;   
+  department_id: number | null;
+  /** Used to resolve departmental HOD when none appears in the reporting chain. */
   company_key?: string | null;
+  department?: string | null;
 }
 
 
@@ -62,7 +64,14 @@ export interface BuildWorkflowResult {
   steps: BuiltWorkflowStep[];
   meta: {
     used_reporting_chain_length: number;
-    used_policy: "DIRECT_MANAGER" | "MID" | "FULL" | "HR_ONLY" | "MANAGER_THEN_HR";
+    used_policy:
+      | "DIRECT_MANAGER"
+      | "MID"
+      | "FULL"
+      | "HR_ONLY"
+      | "MANAGER_THEN_HR"
+      | "HR_THEN_MANAGER"
+      | "PARALLEL_HR_AND_HOD";
   };
 }
 

@@ -161,17 +161,33 @@ class IdentityEngine {
             throw new Error("email is required");
         if (!employee_number)
             throw new Error("employee_number is required");
+        const plainPassword = typeof input.password === "string" && input.password.trim()
+            ? input.password.trim()
+            : crypto_1.default.randomBytes(18).toString("base64url");
+        const mustChange = input.must_change_password ?? (input.password ? false : true);
+        const allowExisting = input.allow_existing === true;
         const existing = await this.users.findByEmail(email);
-        if (existing)
+        let row;
+        if (existing && !allowExisting) {
             throw new Error("User with this email already exists");
-        const temporary_password = crypto_1.default.randomBytes(18).toString("base64url");
-        const password_hash = await this.hashPassword(temporary_password);
-        const row = await this.users.create({
-            employee_number,
-            email,
-            password_hash,
-            must_change_password: true,
-        });
+        }
+        if (existing && allowExisting) {
+            const password_hash = await this.hashPassword(plainPassword);
+            row = await this.users.update(existing.id, {
+                employee_number,
+                password_hash,
+                must_change_password: mustChange,
+            });
+        }
+        else {
+            const password_hash = await this.hashPassword(plainPassword);
+            row = await this.users.create({
+                employee_number,
+                email,
+                password_hash,
+                must_change_password: mustChange,
+            });
+        }
         const isSystemAdmin = this.isSystemAdminEmail(row.email);
         return {
             user: {
@@ -179,9 +195,9 @@ class IdentityEngine {
                 employee_number: row.employee_number,
                 email: row.email,
                 is_system_admin: isSystemAdmin,
-                must_change_password: true,
+                must_change_password: Boolean(row.must_change_password),
             },
-            temporary_password,
+            temporary_password: plainPassword,
         };
     }
     async changePassword(userId, currentPassword, newPassword) {

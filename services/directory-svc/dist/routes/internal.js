@@ -45,5 +45,6 @@ router.get("/handover-candidates", rbac_1.internalOnly, Internal.listHandoverCan
 router.get("/by-department", rbac_1.internalOnly, Internal.getEmployeesByDepartment);
 router.get("/department-summary", rbac_1.internalOnly, Internal.getDepartmentSummary);
 router.post("/by-numbers", rbac_1.internalOnly, Internal.getEmployeesByNumbers);
+router.post("/seed-upsert-employee", rbac_1.internalOnly, Internal.seedUpsertEmployee);
 router.get("/:manager_id/subordinates", mgr.getSubordinates);
 exports.default = router;

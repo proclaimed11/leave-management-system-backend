@@ -15,13 +15,13 @@ INSERT INTO employees (
   directory_role,
   company_key
 ) VALUES
-  ('SYSADMIN', 'System Administrator', 'admin@mail.com', 'ESL_IT', 'Administrator', 'PERMANENT', 'ACTIVE', 'MOMBASA', 'admin', 'ESL'),
-  ('HR-DEMO-01', 'Demo HR Officer', 'hr.demo@mail.com', 'ESL_HR', 'HR Officer', 'PERMANENT', 'ACTIVE', 'MOMBASA', 'HR', 'ESL'),
-  ('EMP-DEMO-01', 'Demo Employee', 'employee.demo@mail.com', 'ESL_AGENCY', 'Agent', 'PERMANENT', 'ACTIVE', 'MOMBASA', 'employee', 'ESL'),
-  ('SUP-DEMO-01', 'Demo Supervisor', 'supervisor.demo@mail.com', 'ESL_TECH', 'Team Lead', 'PERMANENT', 'ACTIVE', 'MOMBASA', 'supervisor', 'ESL'),
-  ('HOD-DEMO-01', 'Demo Head of Department', 'hod.demo@mail.com', 'ESL_QHSSE', 'HOD', 'PERMANENT', 'ACTIVE', 'MOMBASA', 'hod', 'ESL'),
-  ('MGT-DEMO-01', 'Demo Management', 'management.demo@mail.com', 'ESL_EXCOM', 'Executive', 'PERMANENT', 'ACTIVE', 'MOMBASA', 'management', 'ESL'),
-  ('CON-DEMO-01', 'Demo Consultant', 'consultant.demo@mail.com', 'ESL_AUDIT', 'Consultant', 'CONTRACT', 'ACTIVE', 'MOMBASA', 'consultant', 'ESL')
+  ('SYSADMIN', 'System Administrator', 'admin@mail.com', 'ESL_IT', 'Administrator', 'PERMANENT', 'ACTIVE', 'KE_MOMBASA', 'admin', 'ESL'),
+  ('HR-DEMO-01', 'Demo HR Officer', 'hr.demo@mail.com', 'ESL_HR', 'HR Officer', 'PERMANENT', 'ACTIVE', 'KE_MOMBASA', 'HR', 'ESL'),
+  ('EMP-DEMO-01', 'Demo Employee', 'employee.demo@mail.com', 'ESL_AGENCY', 'Agent', 'PERMANENT', 'ACTIVE', 'KE_MOMBASA', 'employee', 'ESL'),
+  ('SUP-DEMO-01', 'Demo Supervisor', 'supervisor.demo@mail.com', 'ESL_TECH', 'Team Lead', 'PERMANENT', 'ACTIVE', 'KE_MOMBASA', 'supervisor', 'ESL'),
+  ('HOD-DEMO-01', 'Demo Head of Department', 'hod.demo@mail.com', 'ESL_QHSSE', 'HOD', 'PERMANENT', 'ACTIVE', 'KE_MOMBASA', 'hod', 'ESL'),
+  ('MGT-DEMO-01', 'Demo Management', 'management.demo@mail.com', 'ESL_EXCOM', 'Executive', 'PERMANENT', 'ACTIVE', 'KE_MOMBASA', 'management', 'ESL'),
+  ('CON-DEMO-01', 'Demo Consultant', 'consultant.demo@mail.com', 'ESL_AUDIT', 'Consultant', 'CONTRACT', 'ACTIVE', 'KE_MOMBASA', 'consultant', 'ESL')
 ON CONFLICT (employee_number) DO UPDATE SET
   full_name = EXCLUDED.full_name,
   email = EXCLUDED.email,

@@ -8,6 +8,7 @@ import {
   PaginatedResult,
   LeaveApproval,
   PendingApprovalRow,
+  LeaveRequestRow,
 } from "../types/types";
 import { getEmployeeProfile } from "./directoryService";
 import { LeaveEngine } from "./leaveEngine";
@@ -21,6 +22,65 @@ export class LeaveApprovalEngine {
     private leaveRepo = new LeaveRepository(),
     private leaveEngine = new LeaveEngine(),
   ) {}
+
+  private canViewOrActForScope(
+    approver: {
+      role: EmployeeRole;
+      location?: string | null;
+      department_id?: number | null;
+      department?: string | null;
+    },
+    requester: {
+      location?: string | null;
+      department_id?: number | null;
+      department?: string | null;
+    },
+    options?: {
+      strict?: boolean;
+    },
+  ): boolean {
+    const strict = Boolean(options?.strict);
+
+    // HOD must also match requester's department.
+    if (approver.role === "hod") {
+      const approverDeptName = String(approver.department ?? "")
+        .trim()
+        .toLowerCase();
+      const requesterDeptName = String(requester.department ?? "")
+        .trim()
+        .toLowerCase();
+
+      // Preferred: strict department_id match when both are available.
+      if (
+        approver.department_id !== null &&
+        approver.department_id !== undefined &&
+        requester.department_id !== null &&
+        requester.department_id !== undefined
+      ) {
+        return approver.department_id === requester.department_id;
+      }
+
+      // Fallback: compare normalized department names if IDs are absent.
+      const byName =
+        approverDeptName.length > 0 &&
+        requesterDeptName.length > 0 &&
+        approverDeptName === requesterDeptName;
+
+      if (byName) return true;
+
+      // For list/history visibility, avoid dropping rows when profile metadata
+      // is partially missing; enforce strict check when acting on approvals.
+      return strict ? false : true;
+    }
+
+    // HR: same country is enough.
+    if (approver.role === "hr") {
+      return true;
+    }
+
+    // Keep non-HOD/HR behavior unchanged.
+    return true;
+  }
 
   async getMyPendingApprovals(
     employeeNumber: string,
@@ -98,14 +158,13 @@ export class LeaveApprovalEngine {
       search?: string;
     },
   ): Promise<PaginatedResult<any>> {
-    const { total, items } =
-      await this.approvalRepo.getApprovalHistoryForEmployee(
-        employeeNumber,
-        role,
-        page,
-        limit,
-        options,
-      );
+    const { total, items } = await this.approvalRepo.getApprovalHistoryForEmployee(
+      employeeNumber,
+      role,
+      page,
+      limit,
+      options,
+    );
 
     if (items.length === 0) {
       return { total, requests: [] };
@@ -167,6 +226,70 @@ export class LeaveApprovalEngine {
     return this.repo.getApprovalsByRequestId(requestId);
   }
 
+  /**
+   * Whether this viewer may act on the current pending step (same rules as POST .../act).
+   * Used by GET leave-request/:id so the UI does not depend on duplicated client logic.
+   */
+  async canViewerActOnRequest(
+    requestId: number,
+    actor: { employee_number: string; role: EmployeeRole },
+  ): Promise<boolean> {
+    const leave = await this.leaveRepo.getLeaveRequestById(requestId);
+    if (!leave || String(leave.status).toUpperCase() !== "PENDING") {
+      return false;
+    }
+    const pending = await this.repo.getPendingStepsForRequest(requestId);
+    for (const step of pending) {
+      if (await this.validateActorForCurrentStep(requestId, leave, step, actor)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private async validateActorForCurrentStep(
+    requestId: number,
+    leave: LeaveRequestRow,
+    step: LeaveApproval,
+    actor: { employee_number: string; role: EmployeeRole },
+  ): Promise<boolean> {
+    const canApprove = await this.repo.canEmployeeApprove(
+      requestId,
+      step.step_order,
+      actor.employee_number,
+      actor.role,
+    );
+    if (!canApprove) {
+      return false;
+    }
+
+    if (actor.role === "hr" || actor.role === "hod") {
+      const [approverProfile, requesterProfile] = await Promise.all([
+        getEmployeeProfile({ employee_number: actor.employee_number }),
+        getEmployeeProfile({ employee_number: leave.employee_number }),
+      ]);
+
+      const scoped = this.canViewOrActForScope(
+        {
+          role: actor.role,
+          location: approverProfile.location ?? null,
+          department_id: approverProfile.department_id ?? null,
+          department: approverProfile.department ?? null,
+        },
+        {
+          location: requesterProfile.location ?? null,
+          department_id: requesterProfile.department_id ?? null,
+          department: requesterProfile.department ?? null,
+        },
+        { strict: true },
+      );
+
+      return scoped;
+    }
+
+    return true;
+  }
+
   async actOnApproval(
     requestId: number,
     actor: {
@@ -175,35 +298,46 @@ export class LeaveApprovalEngine {
     },
     input: UpdateApprovalInput,
   ): Promise<void> {
-    const step = await this.repo.getNextPendingStep(requestId);
+    const leave = await this.leaveRepo.getLeaveRequestById(requestId);
+    if (!leave) throw new Error("Leave request not found");
+
+    const pending = await this.repo.getPendingStepsForRequest(requestId);
+    let step: LeaveApproval | null = null;
+    for (const s of pending) {
+      if (await this.validateActorForCurrentStep(requestId, leave, s, actor)) {
+        step = s;
+        break;
+      }
+    }
 
     if (!step) {
       throw new Error("No pending approval step");
     }
 
-    const canApprove = await this.repo.canEmployeeApprove(
-      requestId,
-      step.step_order,
-      actor.employee_number,
-      actor.role,
-    );
-
-    if (!canApprove) {
-      throw new Error("Not authorized to approve this request");
-    }
-
-    // When approving: require attachment if the leave type requires a document
+    // When approving: require attachment per policy (requires_document and/or
+    // attachment_required_after_days — e.g. medical cert only after N calendar days).
     if (input.action === "APPROVED") {
-      const leave = await this.leaveRepo.getLeaveRequestById(requestId);
       if (leave?.leave_type_key) {
         const leaveTypes = await getLeaveTypesWithRules();
         const rawRule = leaveTypes.find((t) => t.type_key === leave.leave_type_key);
         const rule = mergeRule(rawRule);
-        if (rule.requires_document) {
+        const totalDays = Number(leave.total_days);
+        const afterRaw = rule.attachment_required_after_days;
+        const after =
+          afterRaw != null && !Number.isNaN(Number(afterRaw))
+            ? Number(afterRaw)
+            : null;
+
+        let needAttachment = Boolean(rule.requires_document);
+        if (after != null && after > 0) {
+          needAttachment = totalDays > after;
+        }
+
+        if (needAttachment) {
           const attachments = await this.leaveRepo.getAttachments(requestId);
           if (!attachments?.length) {
             throw new Error(
-              "An attachment is required for this leave type. The employee must upload a document from their leave request details before approval.",
+              "An attachment is required for this leave type before approval (e.g. medical certificate). The employee should upload it on the leave request, or shorten the leave if a document is only required after a minimum number of days.",
             );
           }
         }
@@ -213,6 +347,11 @@ export class LeaveApprovalEngine {
     await this.repo.updateApprovalStep(requestId, step.step_order, input);
 
     if (input.action === "REJECTED") {
+      await this.repo.cancelOtherPendingSteps(
+        requestId,
+        step.step_order,
+        actor.employee_number,
+      );
       await this.leaveRepo.updateLeaveRequestStatus(requestId, "REJECTED");
       return;
     }

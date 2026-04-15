@@ -1,5 +1,5 @@
 import { DashboardRepository } from "../repositories/dashboardRepository";
-import { DashboardOverview } from "../types/dashboard";
+import { CountryDashboardOverview, DashboardOverview } from "../types/dashboard";
 
 export class DashboardEngine {
   constructor(private repo = new DashboardRepository()) {}
@@ -18,5 +18,12 @@ export class DashboardEngine {
       employeesByDepartment,
       employeesByRole,
     };
+  }
+
+  async getCountryOverview(countryPrefix: string): Promise<CountryDashboardOverview> {
+    if (!countryPrefix?.trim()) {
+      throw new Error("country_prefix is required");
+    }
+    return this.repo.getCountryOverview(countryPrefix);
   }
 }

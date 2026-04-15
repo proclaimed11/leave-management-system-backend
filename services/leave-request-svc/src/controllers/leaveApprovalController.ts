@@ -1,9 +1,10 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { dashboardEngineInstance } from "../services/dashboardEngine";
 import { LeaveApprovalEngine } from "../services/leaveApprovalEngine";
 import { EmployeeRole, JwtUser } from "../types/types";
 import { AuthRequest } from "../types/authRequest";
 import { mapDirectoryRoleToEmployeeRole } from "../types/roleMapper";
+import { isClientError } from "../utils/errorClassifier";
 
 const engine = new LeaveApprovalEngine();
 
@@ -57,12 +58,17 @@ export async function getMyApprovalHistory(req: AuthRequest, res: Response) {
             | "PENDING")
         : undefined;
 
+    const search =
+      typeof req.query.search === "string" && req.query.search.trim()
+        ? req.query.search.trim()
+        : undefined;
+
     const result = await engine.getMyApprovalHistory(
       user.employee_number,
       getRoleForApproval(req),
       page,
       limit,
-      { action },
+      { action, search },
     );
 
     const count = result.requests.length;
@@ -93,24 +99,39 @@ export async function getApprovalTrail(req: AuthRequest, res: Response) {
 }
 
 export async function actOnApproval(req: AuthRequest, res: Response) {
-  const me = (req as any).user as JwtUser;
-  const requestId = Number(req.params.requestId);
-  const { action, remarks } = req.body;
+  try {
+    const me = (req as any).user as JwtUser;
+    const requestId = Number(req.params.requestId);
+    const { action, remarks } = req.body;
 
-  await engine.actOnApproval(
-    requestId,
-    {
-      employee_number: me.employee_number,
-      role: getRoleForApproval(req),
-    },
-    {
-      action,
-      approver_emp_no: me.employee_number,
-      remarks,
-    },
-  );
+    await engine.actOnApproval(
+      requestId,
+      {
+        employee_number: me.employee_number,
+        role: getRoleForApproval(req),
+      },
+      {
+        action,
+        approver_emp_no: me.employee_number,
+        remarks,
+      },
+    );
 
-  dashboardEngineInstance.invalidateHrDashboardCache();
+    dashboardEngineInstance.invalidateHrDashboardCache();
 
-  return res.json({ message: "Approval updated successfully" });
+    return res.json({ message: "Approval updated successfully" });
+  } catch (err: any) {
+    const msg = err?.message ?? "Approval failed";
+    const lower = String(msg).toLowerCase();
+    const code =
+      /not authorized|unauthorized|forbidden/.test(lower)
+        ? 403
+        : isClientError(msg)
+          ? 400
+          : 500;
+    if (code >= 500) {
+      console.error("actOnApproval error:", err);
+    }
+    return res.status(code).json({ error: msg });
+  }
 }

@@ -41,5 +41,37 @@ class DashboardRepository {
     `);
         return r.rows;
     }
+    async getCountryOverview(countryPrefix) {
+        const prefix = countryPrefix.trim().toUpperCase();
+        const result = await connection_1.pool.query(`
+      WITH scoped_employees AS (
+        SELECT *
+        FROM employees
+        WHERE UPPER(SPLIT_PART(COALESCE(location, ''), '_', 1)) = $1
+      )
+      SELECT
+        (SELECT COUNT(*)::int FROM scoped_employees) AS total_employees,
+        (SELECT COUNT(*)::int FROM scoped_employees WHERE status = 'ACTIVE') AS active_employees,
+        (SELECT COUNT(*)::int FROM scoped_employees WHERE status = 'ARCHIVED') AS archived_employees,
+        (SELECT COUNT(DISTINCT department)::int
+         FROM scoped_employees
+         WHERE department IS NOT NULL AND TRIM(department) <> '') AS departments,
+        (SELECT COUNT(*)::int
+         FROM locations
+         WHERE UPPER(SPLIT_PART(location_key, '_', 1)) = $1
+           AND UPPER(COALESCE(status, '')) = 'ACTIVE') AS branches
+      `, [prefix]);
+        const row = result.rows[0] ?? {};
+        return {
+            country_prefix: prefix,
+            kpis: {
+                totalEmployees: Number(row.total_employees ?? 0),
+                activeEmployees: Number(row.active_employees ?? 0),
+                archivedEmployees: Number(row.archived_employees ?? 0),
+                departments: Number(row.departments ?? 0),
+                branches: Number(row.branches ?? 0),
+            },
+        };
+    }
 }
 exports.DashboardRepository = DashboardRepository;

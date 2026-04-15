@@ -14,45 +14,47 @@ import { loadDirectoryRole } from "../middleware/loadDirectoryRole";
 import { upload } from "../middleware/upload";
 
 const router = Router();
+const auth = authMiddleware as any;
+const staff = staffOnly as any;
 
-router.post("/apply", authMiddleware, loadDirectoryRole, staffOnly, applyLeave);
+router.post("/apply", auth, loadDirectoryRole, staff, applyLeave);
 
 router.get(
   "/my-requests",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  staffOnly,
+  staff,
   getMyLeaveRequests,
 );
 router.get(
   "/:request_id",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  staffOnly,
+  staff,
   getOneRequest,
 );
 router.post(
   "/:request_id/attachments",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  staffOnly,
+  staff,
   upload.single("file"),
   uploadLeaveAttachment,
 );
 
 router.get(
   "/:request_id/attachments",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  staffOnly,
+  staff,
   listLeaveAttachments,
 );
 
 router.post(
   "/:id/submit",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  staffOnly,
+  staff,
   submitDraftLeaveRequest,
 );
 

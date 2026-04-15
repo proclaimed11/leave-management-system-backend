@@ -21,5 +21,11 @@ class DashboardEngine {
             employeesByRole,
         };
     }
+    async getCountryOverview(countryPrefix) {
+        if (!countryPrefix?.trim()) {
+            throw new Error("country_prefix is required");
+        }
+        return this.repo.getCountryOverview(countryPrefix);
+    }
 }
 exports.DashboardEngine = DashboardEngine;

@@ -7,9 +7,10 @@ export const pool = new Pool({
   user: process.env.DB_USER || "postgres",
   password: process.env.DB_PASSWORD || "nabokiLASCAP1998",
   database: process.env.DB_NAME || "entitlement_svc",
-    ssl: {
-    rejectUnauthorized: false,
-  },
+  ssl:
+    String(process.env.DB_SSL ?? "false").toLowerCase() === "true"
+      ? { rejectUnauthorized: false }
+      : undefined,
   max: 10,
   idleTimeoutMillis: 30000,
 });

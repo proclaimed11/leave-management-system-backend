@@ -42,7 +42,7 @@ class EmployeeRepository {
         return result.rows[0] ?? null;
     }
     async listEmployees(filters) {
-        const { page = 1, limit = 5, department, status, manager, search, company_key, sort_by, sort_dir, } = filters;
+        const { page = 1, limit = 5, department, status, manager, search, company_key, location_prefix, strict_department, sort_by, sort_dir, } = filters;
         const offset = (page - 1) * limit;
         const SORT_COLUMNS = {
             employee_number: "employee_number",
@@ -81,6 +81,14 @@ class EmployeeRepository {
         if (company_key) {
             params.push(company_key);
             where += ` AND company_key = $${params.length}`;
+        }
+        if (location_prefix) {
+            params.push(location_prefix.toUpperCase());
+            where += ` AND UPPER(SPLIT_PART(COALESCE(location, ''), '_', 1)) = $${params.length}`;
+        }
+        if (strict_department) {
+            params.push(strict_department);
+            where += ` AND department = $${params.length}`;
         }
         // Get total count with same filters (before pagination)
         const countQuery = `

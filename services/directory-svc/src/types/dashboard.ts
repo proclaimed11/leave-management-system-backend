@@ -20,3 +20,14 @@ export interface DashboardOverview {
   employeesByDepartment: DepartmentCount[];
   employeesByRole: RoleCount[];
 }
+
+export interface CountryDashboardOverview {
+  country_prefix: string;
+  kpis: {
+    totalEmployees: number;
+    activeEmployees: number;
+    archivedEmployees: number;
+    departments: number;
+    branches: number;
+  };
+}

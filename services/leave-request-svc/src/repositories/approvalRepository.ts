@@ -114,29 +114,47 @@ export class ApprovalRepository {
       ? `%${options!.search!.trim()}%`
       : null;
 
+    const involvedSql = `
+      SELECT DISTINCT la0.request_id
+      FROM leave_approvals la0
+      INNER JOIN leave_requests lr0 ON lr0.id = la0.request_id
+      WHERE
+        (la0.approver_emp_no = $1 AND la0.action IN ('APPROVED', 'REJECTED'))
+        OR (
+          la0.action = 'PENDING' AND lr0.status = 'PENDING'
+          AND (
+            (la0.approver_emp_no IS NOT NULL AND la0.approver_emp_no = $1)
+            OR (
+              la0.approver_emp_no IS NULL
+              AND LOWER(TRIM(la0.role::text)) = LOWER(TRIM($2::text))
+            )
+          )
+        )
+    `;
+
+    const listFilters = `
+      lr.id IN (${involvedSql})
+      AND ($3::text IS NULL OR la.action::text = $3::text)
+      AND (
+        $4::text IS NULL
+        OR lr.employee_number ILIKE $4
+        OR lr.leave_type_key ILIKE $4
+      )
+    `;
+
     const totalRes = await pool.query<{ count: string }>(
       `
-      SELECT COUNT(*) AS count
+      SELECT COUNT(DISTINCT lr.id)::text AS count
       FROM leave_approvals la
-      JOIN leave_requests lr ON lr.id = la.request_id
-      WHERE
-        (
-          la.approver_emp_no = $1
-          OR (la.approver_emp_no IS NULL AND la.role = $2)
-        )
-        AND ($3::text IS NULL OR la.action = $3::text)
-        AND (
-          $4::text IS NULL
-          OR lr.employee_number ILIKE $4
-          OR lr.leave_type_key ILIKE $4
-        )
+      INNER JOIN leave_requests lr ON lr.id = la.request_id
+      WHERE ${listFilters}
       `,
       [employeeNumber, role, actionFilter, search],
     );
 
     const dataRes = await pool.query<ApprovalHistoryRow>(
       `
-      SELECT
+      SELECT DISTINCT ON (lr.id)
         la.id              AS approval_id,
         la.request_id      AS request_id,
         la.step_order      AS step_order,
@@ -145,7 +163,6 @@ export class ApprovalRepository {
         la.action          AS action,
         la.remarks         AS remarks,
         la.acted_at        AS acted_at,
-
         lr.employee_number AS requester_emp_no,
         lr.leave_type_key  AS leave_type_key,
         lr.start_date      AS start_date,
@@ -154,20 +171,25 @@ export class ApprovalRepository {
         lr.reason          AS reason,
         lr.created_at      AS applied_at
       FROM leave_approvals la
-      JOIN leave_requests lr ON lr.id = la.request_id
-      WHERE
-        (
-          la.approver_emp_no = $1
-          OR (la.approver_emp_no IS NULL AND la.role = $2)
-        )
-        AND ($3::text IS NULL OR la.action = $3::text)
-        AND (
-          $4::text IS NULL
-          OR lr.employee_number ILIKE $4
-          OR lr.leave_type_key ILIKE $4
-        )
+      INNER JOIN leave_requests lr ON lr.id = la.request_id
+      WHERE ${listFilters}
       ORDER BY
-        COALESCE(la.acted_at, la.created_at) DESC
+        lr.id,
+        CASE
+          WHEN LOWER(TRIM(la.role::text)) = LOWER(TRIM($2::text)) THEN 0
+          ELSE 1
+        END,
+        CASE
+          WHEN $3::text IS NOT NULL AND la.action::text = $3::text THEN 0
+          ELSE 1
+        END,
+        CASE
+          WHEN la.action::text = 'PENDING' THEN 0
+          WHEN la.action::text = 'REJECTED' THEN 1
+          ELSE 2
+        END,
+        la.step_order ASC,
+        COALESCE(la.acted_at, la.created_at) DESC NULLS LAST
       LIMIT $5 OFFSET $6
       `,
       [employeeNumber, role, actionFilter, search, pageSize, offset],

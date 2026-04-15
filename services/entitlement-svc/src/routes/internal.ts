@@ -3,10 +3,11 @@ import { getEmployeeEntitlements,deductEntitlement,generateEntitlementsForOne} f
 import { authMiddleware } from "@libs/auth-jwt";
 
 const router = Router();
+const auth = authMiddleware as any;
 router.post(
   "/entitlements/generate-for-one",
   generateEntitlementsForOne,
-  authMiddleware,
+  auth,
 );
 router.get("/entitlement/:employee_number", getEmployeeEntitlements);
 router.post("/entitlement/deduct", deductEntitlement);

@@ -20,7 +20,11 @@ import {
 } from "./directoryService";
 
 import { getHolidaysBetween, getLeaveTypesWithRules } from "./policyService";
-import { getEntitlements, deductEntitlement } from "./entitlementService";
+import {
+  getEntitlements,
+  deductEntitlement,
+  generateEntitlementsForOne,
+} from "./entitlementService";
 import { ApprovalEngine } from "./approvalWorkflowEngine";
 import { ApprovalRepository } from "../repositories/approvalRepository";
 
@@ -32,6 +36,11 @@ import {
 } from "../validators/leaveValidator";
 import { mapDirectoryRoleToEmployeeRole } from "../types/roleMapper";
 import { countLeaveDays } from "../utils/leaveDays";
+import type { ApprovalEmployee } from "../types/approval";
+import { findDepartmentHodEmployee } from "./directoryService";
+
+// Temporary presentation mode: keep entitlement integration but do not block applies by balance.
+const ENFORCE_ENTITLEMENT_BALANCE = false;
 
 export class LeaveEngine {
   constructor(private repo = new LeaveRepository()) {}
@@ -57,6 +66,11 @@ export class LeaveEngine {
     updateRequestStatus: async (request_id, status) => {
       await this.repo.updateLeaveRequestStatus(request_id, status);
     },
+
+    findDepartmentHod: async (
+      companyKey: string,
+      department: string,
+    ): Promise<ApprovalEmployee | null> => findDepartmentHodEmployee(companyKey, department),
   });
   async apply(
     authHeader: string | undefined,
@@ -262,16 +276,27 @@ export class LeaveEngine {
       throw new Error("Overlapping leave request exists");
     }
 
-    const entitlements = await getEntitlements(me.employee_number);
-    const entitlement = entitlements.find(
-      (e) => e.leave_type_key === leave_type_key,
-    );
+    let entitlements = await getEntitlements(me.employee_number);
+    let entitlement = entitlements.find((e) => e.leave_type_key === leave_type_key);
 
     if (!entitlement) {
-      throw new Error(`No entitlement found for ${leave_type_key}`);
+      // Recommended data-fix path:
+      // generate missing entitlements for this employee, then re-check.
+      await generateEntitlementsForOne(me.employee_number);
+      entitlements = await getEntitlements(me.employee_number);
+      entitlement = entitlements.find((e) => e.leave_type_key === leave_type_key);
     }
 
-    if (Number(entitlement.remaining_days) < daysRequested) {
+    if (!entitlement) {
+      throw new Error(
+        `No entitlement found for ${leave_type_key} after generation`,
+      );
+    }
+
+    if (
+      ENFORCE_ENTITLEMENT_BALANCE &&
+      Number(entitlement.remaining_days) < daysRequested
+    ) {
       throw new Error(
         `Insufficient balance. Remaining: ${entitlement.remaining_days}, requested: ${daysRequested}`,
       );
@@ -283,6 +308,8 @@ export class LeaveEngine {
         role: mapDirectoryRoleToEmployeeRole(profile.directory_role),
         reports_to: profile.manager_employee_number ?? null,
         department_id: profile.department_id ?? null,
+        company_key: profile.company_key ?? null,
+        department: profile.department ?? null,
       },
       leave_type_key,
       days_requested: daysRequested,
@@ -375,6 +402,42 @@ export class LeaveEngine {
       search,
     });
   }
+
+  private departmentsMatch(a: DirectoryProfile, b: DirectoryProfile): boolean {
+    if (a.department_id != null && b.department_id != null) {
+      return a.department_id === b.department_id;
+    }
+    const da = String(a.department ?? "")
+      .trim()
+      .toLowerCase();
+    const db = String(b.department ?? "")
+      .trim()
+      .toLowerCase();
+    return da.length > 0 && db.length > 0 && da === db;
+  }
+
+  /**
+   * HOD/HR can open full request details when directory scope matches.
+   * Does not require a workflow step with their role (e.g. HR-first flows still
+   * let same-scope HOD read details; approve/reject remains gated by pending step).
+   */
+  private async canViewLeaveRequestAsScopedApprover(
+    leave: LeaveRequestRow,
+    viewer: { employee_number: string; role: EmployeeRole },
+    _approvals: { role: string }[],
+  ): Promise<boolean> {
+    const vr = String(viewer.role).toLowerCase();
+    if (vr !== "hod" && vr !== "hr") return false;
+
+    const [requesterProfile, viewerProfile] = await Promise.all([
+      getEmployeeProfile({ employee_number: leave.employee_number }),
+      getEmployeeProfile({ employee_number: viewer.employee_number }),
+    ]);
+
+    if (vr === "hr") return true;
+    return this.departmentsMatch(viewerProfile, requesterProfile);
+  }
+
   async getLeaveRequestDetails(
     requestId: number,
     viewer: { employee_number: string; role: EmployeeRole },
@@ -392,11 +455,23 @@ export class LeaveEngine {
       (a) => a.approver_emp_no === viewer.employee_number,
     );
 
-    const isRoleApprover = approvals.some(
-      (a) => a.approver_emp_no === null && a.role === viewer.role,
+    const normalizedViewerRole = String(viewer.role).toLowerCase();
+    const isRoleApprover = approvals.some((a) => {
+      const stepRole = String(a.role).toLowerCase();
+      if (stepRole !== normalizedViewerRole) return false;
+      return (
+        a.approver_emp_no == null ||
+        a.approver_emp_no === viewer.employee_number
+      );
+    });
+
+    const canViewScoped = await this.canViewLeaveRequestAsScopedApprover(
+      leave,
+      viewer,
+      approvals,
     );
 
-    if (!isDirectApprover && !isRoleApprover) {
+    if (!isDirectApprover && !isRoleApprover && !canViewScoped) {
       throw new Error("You are not authorized to view this leave request");
     }
     return this.buildLeaveDetails(leave, requestId);
@@ -433,6 +508,8 @@ export class LeaveEngine {
         email: requesterProfile.email,
         department: requesterProfile.department,
         title: requesterProfile.title,
+        company_key: requesterProfile.company_key,
+        location: requesterProfile.location ?? null,
       },
       approvals: approvalTrail,
       attachments,

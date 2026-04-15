@@ -21,7 +21,15 @@ export const getEmployeeEntitlements = async (req: Request, res: Response) => {
     const rows = await engine.employeeEntitlements(req.params.employee_number, year);
     return res.json({ employee_number: req.params.employee_number, count: rows.length,  entitlements: rows });
   } catch (e:any) {
-    const code = /not found/i.test(String(e.message)) ? 404 : 500;
+    const message = String(e.message ?? "");
+    if (/no entitlements found/i.test(message)) {
+      return res.json({
+        employee_number: req.params.employee_number,
+        count: 0,
+        entitlements: [],
+      });
+    }
+    const code = /not found/i.test(message) ? 404 : 500;
     return res.status(code).json({ error: e.message || "Internal server error" });
   }
 };

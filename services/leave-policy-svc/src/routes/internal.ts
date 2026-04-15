@@ -5,13 +5,14 @@ import { getHolidaysBetween } from "../controllers/holidayController";
 
 
 const router = Router();
-router.get("/leave-types",internalOnly,listLeaveTypesInternal);
+const internal = internalOnly as any;
+router.get("/leave-types",internal,listLeaveTypesInternal);
 router.get("/full-leave-policy",getFullPolicy);
 
 
 router.get(
   "/holidays/between",
-  internalOnly,
+  internal,
   getHolidaysBetween
 );
 

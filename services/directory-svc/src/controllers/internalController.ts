@@ -186,3 +186,54 @@ export const getEmployeesByNumbers = async (
     return res.status(500).json({ error: err.message });
   }
 };
+
+export const seedUpsertEmployee = async (req: Request, res: Response) => {
+  try {
+    const body = req.body ?? {};
+    const employee_number = String(body.employee_number ?? "").trim();
+    const full_name = String(body.full_name ?? "").trim();
+    const email = String(body.email ?? "").toLowerCase().trim();
+
+    if (!employee_number || !full_name || !email) {
+      return res.status(422).json({
+        error: "employee_number, full_name and email are required",
+      });
+    }
+
+    await pool.query(
+      `
+      INSERT INTO employees (
+        employee_number, full_name, email, department, title,
+        employment_type, status, location, directory_role, company_key
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      ON CONFLICT (employee_number) DO UPDATE SET
+        full_name = EXCLUDED.full_name,
+        email = EXCLUDED.email,
+        department = EXCLUDED.department,
+        title = EXCLUDED.title,
+        employment_type = EXCLUDED.employment_type,
+        status = EXCLUDED.status,
+        location = EXCLUDED.location,
+        directory_role = EXCLUDED.directory_role,
+        company_key = EXCLUDED.company_key
+      `,
+      [
+        employee_number,
+        full_name,
+        email,
+        String(body.department ?? "").trim() || null,
+        String(body.title ?? "").trim() || null,
+        String(body.employment_type ?? "").trim() || null,
+        String(body.status ?? "ACTIVE").trim(),
+        String(body.location ?? "").trim() || null,
+        String(body.directory_role ?? "").trim() || null,
+        String(body.company_key ?? "").trim() || null,
+      ]
+    );
+
+    return res.json({ upserted: true, employee_number, email });
+  } catch (err: any) {
+    console.error("seedUpsertEmployee error", err);
+    return res.status(500).json({ error: err.message || "Internal server error" });
+  }
+};

@@ -5,12 +5,14 @@ import { getApplyLeaveOverview } from "../controllers/applyLeaveOverviewControll
 import { loadDirectoryRole } from "../middleware/loadDirectoryRole";
 
 const router = Router();
+const auth = authMiddleware as any;
+const staff = staffOnly as any;
 
 router.get(
   "/leave-overview",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  staffOnly,
+  staff,
   getApplyLeaveOverview
 );
 

@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Client } from "pg";
 import { pool } from "./connection";
+import { seedDemoEmployees } from "./runSeedDemoEmployees";
 
 type MigrationRow = {
   filename: string;
@@ -106,4 +107,8 @@ export async function runPendingMigrations(): Promise<void> {
 export async function bootstrapDatabase(): Promise<void> {
   await ensureDatabaseExists();
   await runPendingMigrations();
+  const autoSeedDemoUsers = parseBool(process.env.AUTO_SEED_DEMO_USERS, true);
+  if (autoSeedDemoUsers) {
+    await seedDemoEmployees();
+  }
 }

@@ -4,6 +4,7 @@ export interface EmployeeCore {
   email: string;
   department: string | null;
   title: string | null;
+  location?: string | null;
   status: string;
   manager_employee_number: string | null;
   directory_role: string;
@@ -29,6 +30,10 @@ export interface EmployeeFilters {
   manager?: string;
   search?: string;
   company_key?: string;
+  /** Tenant guard: country prefix from location key (e.g. TZ from TZ_MTWARA). */
+  location_prefix?: string;
+  /** Optional strict department scoping (e.g. HOD). */
+  strict_department?: string;
   /** Whitelisted in repository; invalid values fall back to `full_name`. */
   sort_by?: string;
   sort_dir?: "asc" | "desc";

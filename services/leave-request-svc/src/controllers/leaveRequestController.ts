@@ -8,8 +8,10 @@ import { AuthRequest } from "../types/authRequest";
 import { isClientError } from "../utils/errorClassifier";
 import { mapDirectoryRoleToEmployeeRole } from "../types/roleMapper";
 import { getEmployeeProfile } from "../services/directoryService";
+import { LeaveApprovalEngine } from "../services/leaveApprovalEngine";
 
 const engine = new LeaveEngine();
+const approvalEngine = new LeaveApprovalEngine();
 
 export const applyLeave = async (req: AuthRequest, res: Response) => {
   try {
@@ -152,12 +154,19 @@ export const getOneRequest = async (req: AuthRequest, res: Response) => {
       profile.directory_role.toLowerCase(),
     );
 
-    const data = await engine.getLeaveRequestDetails(requestId, {
-      employee_number: user.employee_number,
+    const viewer = {
+      employee_number: user.employee_number as string,
       role,
-    });
+    };
 
-    return res.json(data);
+    const data = await engine.getLeaveRequestDetails(requestId, viewer);
+
+    const isRequester = data.requester.employee_number === user.employee_number;
+    const viewer_can_act = isRequester
+      ? false
+      : await approvalEngine.canViewerActOnRequest(requestId, viewer);
+
+    return res.json({ ...data, viewer_can_act });
   } catch (err: any) {
     res.status(403).json({ error: err.message });
   }

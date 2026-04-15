@@ -24,10 +24,21 @@ export const provisionUser = async (req: Request, res: Response) => {
     const body = req.body ?? {};
     const email = String(body.email ?? "").trim();
     const employee_number = String(body.employee_number ?? "").trim();
+    const password =
+      body.password === undefined ? undefined : String(body.password ?? "");
+    const must_change_password =
+      body.must_change_password === undefined
+        ? undefined
+        : Boolean(body.must_change_password);
+    const allow_existing =
+      body.allow_existing === undefined ? undefined : Boolean(body.allow_existing);
 
     const result = await engine.provisionUserFromDirectory({
       employee_number,
       email,
+      password,
+      must_change_password,
+      allow_existing,
     });
 
     return res.status(201).json({

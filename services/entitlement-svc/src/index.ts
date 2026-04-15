@@ -1,6 +1,8 @@
+import "dotenv/config";
 import { makeApp, errorHandler } from "@libs/common-express";
 import entitlementRoutes from "./routes/./entitlement";
 import internalRoutes from "./routes/internal";
+import { runMigration } from "./db/runMigration";
 
 
 const app = makeApp();
@@ -16,6 +18,25 @@ app.use(errorHandler);
 
 const PORT = 3005;
 
-app.listen(PORT, () => {
-  console.log(`Directory Service running on port ${PORT} 🌍`);
-});
+async function start() {
+  try {
+    const autoMigrate = (process.env.AUTO_RUN_MIGRATIONS ?? "true").toLowerCase() === "true";
+    if (autoMigrate) {
+      await runMigration(false);
+      console.log("Entitlement migrations checked on startup");
+    }
+
+    const server = app.listen(PORT, () => {
+      console.log(`Entitlement Service running on port ${PORT} 🌍`);
+    });
+    server.on("error", (err) => {
+      console.error("Entitlement service listen error:", err);
+      process.exit(1);
+    });
+  } catch (err) {
+    console.error("Failed to bootstrap entitlement service:", err);
+    process.exit(1);
+  }
+}
+
+void start();

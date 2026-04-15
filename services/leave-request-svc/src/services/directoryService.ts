@@ -1,7 +1,7 @@
 import axios from "axios";
+import type { ApprovalEmployee } from "../types/approval";
 import { DirectoryProfile, HandoverCandidate } from "../types/types";
 import { CONFIG } from "../utils/config";
-import e from "express";
 
 export async function getEmployeeProfile(params: {
   employee_number?: string;
@@ -87,17 +87,53 @@ export async function getEmployeesByDepartment(params: {
 }): Promise<DirectoryProfile[]> {
   const { companyKey, department } = params;
 
-  const res = await axios.get<{ employees: DirectoryProfile[] }>(
-    `${CONFIG.DIRECTORY_SVC_URL}/internal/employees/by-department`,
-    {
-      params: { company_key: companyKey, department },
-      headers: {
-        "x-internal-key": process.env.INTERNAL_SERVICE_KEY!,
-      },
+  const res = await axios.get<{
+    employees?: DirectoryProfile[];
+    employee_numbers?: string[];
+  }>(`${CONFIG.DIRECTORY_SVC_URL}/internal/employees/by-department`, {
+    params: { company_key: companyKey, department },
+    headers: {
+      "x-internal-key": process.env.INTERNAL_SERVICE_KEY!,
     },
-  );
+  });
 
-  return res.data.employees ?? [];
+  if (Array.isArray(res.data.employees) && res.data.employees.length > 0) {
+    return res.data.employees;
+  }
+
+  const nums = res.data.employee_numbers ?? [];
+  if (!nums.length) return [];
+
+  const profiles = await Promise.all(
+    nums.map((n) => getEmployeeProfile({ employee_number: n })),
+  );
+  return profiles;
+}
+
+/**
+ * Active HOD in the same company + department (directory_role hod), for approval routing
+ * when no hod appears in the employee's reports_to chain.
+ */
+export async function findDepartmentHodEmployee(
+  companyKey: string,
+  department: string,
+): Promise<ApprovalEmployee | null> {
+  const co = String(companyKey ?? "").trim();
+  const dept = String(department ?? "").trim();
+  if (!co || !dept) return null;
+
+  const employees = await getEmployeesByDepartment({ companyKey: co, department: dept });
+  const hod = employees.find(
+    (e) => String(e.directory_role ?? "").toLowerCase().trim() === "hod",
+  );
+  if (!hod) return null;
+
+  return {
+    employee_number: hod.employee_number,
+    role: "hod",
+    reports_to: hod.manager_employee_number ?? null,
+    department_id: hod.department_id ?? null,
+  };
 }
 export async function getDepartmentSummary(): Promise<
   { company_key: string; department: string; total: number }[]

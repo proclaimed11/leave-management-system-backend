@@ -64,6 +64,8 @@ export class EmployeeRepository {
       manager,
       search,
       company_key,
+      location_prefix,
+      strict_department,
       sort_by,
       sort_dir,
     } = filters;
@@ -110,6 +112,14 @@ export class EmployeeRepository {
     if (company_key) {
       params.push(company_key);
       where += ` AND company_key = $${params.length}`;
+    }
+    if (location_prefix) {
+      params.push(location_prefix.toUpperCase());
+      where += ` AND UPPER(SPLIT_PART(COALESCE(location, ''), '_', 1)) = $${params.length}`;
+    }
+    if (strict_department) {
+      params.push(strict_department);
+      where += ` AND department = $${params.length}`;
     }
 
     // Get total count with same filters (before pagination)

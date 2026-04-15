@@ -10,6 +10,7 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const pg_1 = require("pg");
 const connection_1 = require("./connection");
+const runSeedDemoEmployees_1 = require("./runSeedDemoEmployees");
 function parseBool(value, fallback) {
     if (value === undefined)
         return fallback;
@@ -89,4 +90,8 @@ async function runPendingMigrations() {
 async function bootstrapDatabase() {
     await ensureDatabaseExists();
     await runPendingMigrations();
+    const autoSeedDemoUsers = parseBool(process.env.AUTO_SEED_DEMO_USERS, true);
+    if (autoSeedDemoUsers) {
+        await (0, runSeedDemoEmployees_1.seedDemoEmployees)();
+    }
 }

@@ -10,36 +10,39 @@ import { supervisorOrAbove, staffOnly } from "@libs/rbac";
 import { authMiddleware } from "@libs/auth-jwt";
 
 const router = Router();
+const auth = authMiddleware as any;
+const staff = staffOnly as any;
+const supervisor = supervisorOrAbove as any;
 
 router.get(
   "/pending",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  supervisorOrAbove,
+  supervisor,
   getMyPendingApprovals,
 );
 
 router.get(
   "/history",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  supervisorOrAbove,
+  supervisor,
   getMyApprovalHistory,
 );
 
 router.get(
   "/request/:requestId",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  staffOnly,
+  staff,
   getApprovalTrail,
 );
 
 router.post(
   "/:requestId/act",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
-  supervisorOrAbove,
+  supervisor,
   actOnApproval,
 );
 

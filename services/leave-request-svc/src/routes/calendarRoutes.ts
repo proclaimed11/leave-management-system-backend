@@ -7,11 +7,12 @@ import {
 } from "../controllers/calendarController";
 
 const router = Router();
+const auth = authMiddleware as any;
 
-router.get("/", authMiddleware, loadDirectoryRole, getCalendar);
+router.get("/", auth, loadDirectoryRole, getCalendar);
 router.get(
   "/count",
-  authMiddleware,
+  auth,
   loadDirectoryRole,
   getCalendarCount,
 );

@@ -19,6 +19,12 @@ export interface ApprovalEngineDeps {
     request_id: number,
     status: "PENDING" | "APPROVED" | "REJECTED"
   ) => Promise<void>;
+
+  /** When no HOD is found walking reports_to, resolve by company + department (directory_role = hod). */
+  findDepartmentHod?: (
+    companyKey: string,
+    department: string,
+  ) => Promise<ApprovalEmployee | null>;
 }
 
 export class ApprovalEngine {
@@ -64,7 +70,9 @@ export class ApprovalEngine {
     filtered: ApprovalEmployee[];
     policy: BuildWorkflowResult["meta"]["used_policy"];
   } {
-    const manager = chain.find((c) => ["supervisor", "hod"].includes(c.role));
+    // HR + HOD both required; approval order is parallel (no sequence in DB).
+    // Supervisor is excluded from workflow steps.
+    const manager = chain.find((c) => c.role === "hod");
 
     let hr = chain.find((c) => c.role === "hr");
 
@@ -78,16 +86,14 @@ export class ApprovalEngine {
     }
 
     const filtered: ApprovalEmployee[] = [];
-
+    filtered.push(hr);
     if (manager) {
       filtered.push(manager);
     }
 
-    filtered.push(hr);
-
     return {
       filtered,
-      policy: "MANAGER_THEN_HR",
+      policy: "PARALLEL_HR_AND_HOD",
     };
   }
 
@@ -103,7 +109,7 @@ export class ApprovalEngine {
       step_order: idx + 1,
       role: emp.role,
       approver_emp_no:
-        emp.role === "hr" || emp.role === "management"
+        emp.role === "hr" || emp.role === "management" || emp.role === "hod"
           ? null
           : emp.employee_number,
     }));
@@ -112,7 +118,31 @@ export class ApprovalEngine {
   async buildWorkflow(input: ApprovalChainInput): Promise<BuildWorkflowResult> {
     const reportingChain = await this.walkReportingChain(input.requester);
 
-    const { filtered, policy } = this.applyPolicyStops(reportingChain, input);
+    let { filtered, policy } = this.applyPolicyStops(reportingChain, input);
+
+    const hasHodStep = filtered.some((e) => e.role === "hod");
+    if (
+      !hasHodStep &&
+      this.deps.findDepartmentHod &&
+      input.requester.company_key &&
+      input.requester.department
+    ) {
+      const deptHod = await this.deps.findDepartmentHod(
+        input.requester.company_key,
+        input.requester.department,
+      );
+      if (
+        deptHod &&
+        deptHod.employee_number !== input.requester.employee_number
+      ) {
+        const dup = filtered.some(
+          (e) => e.employee_number === deptHod.employee_number,
+        );
+        if (!dup) {
+          filtered = [...filtered, deptHod];
+        }
+      }
+    }
 
     const steps = this.toWorkflowSteps(filtered);
 

@@ -68,36 +68,30 @@ export class LeaveWorkflowRepository {
     return r.rows;
   }
 
-  async getNextPendingStep(requestId: number): Promise<LeaveApproval | null> {
+  /**
+   * All pending workflow rows for an in-flight leave (HR and HOD may act in parallel).
+   */
+  async getPendingStepsForRequest(requestId: number): Promise<LeaveApproval[]> {
     const r = await pool.query<LeaveApproval>(
       `
       SELECT la.*
       FROM leave_approvals la
+      INNER JOIN leave_requests lr ON lr.id = la.request_id
       WHERE la.request_id = $1
         AND la.action = 'PENDING'
-        AND NOT EXISTS (
-          SELECT 1
-          FROM leave_approvals prev
-          WHERE prev.request_id = la.request_id
-            AND prev.step_order < la.step_order
-            AND prev.action <> 'APPROVED'
-        )
+        AND lr.status = 'PENDING'
       ORDER BY la.step_order ASC
-      LIMIT 1
       `,
-      [requestId]
+      [requestId],
     );
-
-    return r.rows[0] ?? null;
+    return r.rows;
   }
-
-
 
   async canEmployeeApprove(
     requestId: number,
     stepOrder: number,
     employeeNumber: string,
-    employeeRole: EmployeeRole
+    employeeRole: EmployeeRole,
   ): Promise<boolean> {
     const r = await pool.query(
       `
@@ -108,21 +102,43 @@ export class LeaveWorkflowRepository {
         AND la.action = 'PENDING'
         AND (
           (la.approver_emp_no IS NOT NULL AND la.approver_emp_no = $3)
-          OR
-          (la.approver_emp_no IS NULL AND la.role = $4)
-        )
-        AND NOT EXISTS (
-          SELECT 1
-          FROM leave_approvals prev
-          WHERE prev.request_id = la.request_id
-            AND prev.step_order < la.step_order
-            AND prev.action <> 'APPROVED'
+          OR (
+            la.approver_emp_no IS NULL
+            AND LOWER(TRIM(la.role::text)) = LOWER(TRIM($4::text))
+          )
         )
       `,
-      [requestId, stepOrder, employeeNumber, employeeRole]
+      [requestId, stepOrder, employeeNumber, employeeRole],
     );
 
     return r.rowCount === 1;
+  }
+
+  /** When one approver rejects, close remaining pending steps for the same request. */
+  async cancelOtherPendingSteps(
+    requestId: number,
+    exceptStepOrder: number,
+    actorEmployeeNumber: string,
+  ): Promise<void> {
+    await pool.query(
+      `
+      UPDATE leave_approvals
+      SET
+        action = 'REJECTED',
+        approver_emp_no = $2,
+        remarks = $4,
+        acted_at = NOW()
+      WHERE request_id = $1
+        AND action = 'PENDING'
+        AND step_order <> $3
+      `,
+      [
+        requestId,
+        actorEmployeeNumber,
+        exceptStepOrder,
+        "Closed: another approver rejected this leave request.",
+      ],
+    );
   }
 
 
@@ -158,29 +174,30 @@ async getPendingApprovalsForEmployee(
   employeeNumber: string,
   role: EmployeeRole,
   page = 1,
-  pageSize = 20
+  pageSize = 20,
 ): Promise<PaginatedApprovals<PendingApprovalRow>> {
   const offset = (page - 1) * pageSize;
 
+  const stepMatch = `
+    (
+      (la.approver_emp_no IS NOT NULL AND la.approver_emp_no = $1)
+      OR (
+        la.approver_emp_no IS NULL
+        AND LOWER(TRIM(la.role::text)) = LOWER(TRIM($2::text))
+      )
+    )
+  `;
+
   const totalRes = await pool.query<{ count: string }>(
     `
-    SELECT COUNT(*) AS count
+    SELECT COUNT(*)::text AS count
     FROM leave_approvals la
     JOIN leave_requests lr ON lr.id = la.request_id
     WHERE la.action = 'PENDING'
-      AND (
-        la.approver_emp_no = $1
-        OR (la.approver_emp_no IS NULL AND la.role = $2)
-      )
-      AND NOT EXISTS (
-        SELECT 1
-        FROM leave_approvals prev
-        WHERE prev.request_id = la.request_id
-          AND prev.step_order < la.step_order
-          AND prev.action <> 'APPROVED'
-      )
+      AND lr.status = 'PENDING'
+      AND ${stepMatch}
     `,
-    [employeeNumber, role]
+    [employeeNumber, role],
   );
 
   const dataRes = await pool.query<PendingApprovalRow>(
@@ -202,21 +219,12 @@ async getPendingApprovalsForEmployee(
     FROM leave_approvals la
     JOIN leave_requests lr ON lr.id = la.request_id
     WHERE la.action = 'PENDING'
-      AND (
-        la.approver_emp_no = $1
-        OR (la.approver_emp_no IS NULL AND la.role = $2)
-      )
-      AND NOT EXISTS (
-        SELECT 1
-        FROM leave_approvals prev
-        WHERE prev.request_id = la.request_id
-          AND prev.step_order < la.step_order
-          AND prev.action <> 'APPROVED'
-      )
+      AND lr.status = 'PENDING'
+      AND ${stepMatch}
     ORDER BY la.created_at ASC
     LIMIT $3 OFFSET $4
     `,
-    [employeeNumber, role, pageSize, offset]
+    [employeeNumber, role, pageSize, offset],
   );
 
   return {

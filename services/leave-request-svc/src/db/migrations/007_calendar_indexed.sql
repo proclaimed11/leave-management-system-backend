@@ -18,6 +18,9 @@ ADD CONSTRAINT chk_leave_dates_valid
 CHECK (end_date >= start_date);
 
 ALTER TABLE leave_requests
+DROP CONSTRAINT IF EXISTS no_overlapping_approved_leave;
+
+ALTER TABLE leave_requests
 ADD CONSTRAINT no_overlapping_approved_leave
 EXCLUDE USING GIST (
   company_key WITH =,

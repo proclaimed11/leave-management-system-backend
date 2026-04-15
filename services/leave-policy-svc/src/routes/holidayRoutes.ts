@@ -9,17 +9,20 @@ import {
 
 import { authMiddleware } from "@libs/auth-jwt";
 import { loadDirectoryRole } from "../middleware/loadDirectoryRole";
-import {  hrOrAdmin, staffOnly } from "@libs/rbac";
+import { hrOrAdmin, staffOnly } from "@libs/rbac";
 
 const router = Router();
+const auth = authMiddleware as any;
+const hrAdmin = hrOrAdmin as any;
+const staff = staffOnly as any;
 
 
-router.post("/", authMiddleware, loadDirectoryRole,hrOrAdmin, createHoliday);
+router.post("/", auth, loadDirectoryRole,hrAdmin, createHoliday);
 
-router.get("/", authMiddleware, loadDirectoryRole,staffOnly, listHolidays);
+router.get("/", auth, loadDirectoryRole,staff, listHolidays);
 
-router.put("/:id", authMiddleware, loadDirectoryRole,hrOrAdmin, updateHoliday);
-router.delete("/:id", authMiddleware, loadDirectoryRole,hrOrAdmin, deleteHoliday);
+router.put("/:id", auth, loadDirectoryRole,hrAdmin, updateHoliday);
+router.delete("/:id", auth, loadDirectoryRole,hrAdmin, deleteHoliday);
 
 
 export default router;

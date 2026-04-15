@@ -18,11 +18,21 @@ import companyRoutes from "./routes/companyRoutes";
 import employmentTypeRoutes from "./routes/employmentTypeRoutes";
 import countryRoutes from "./routes/countryRoutes";
 import profileRoutes from "./routes/profileRoutes";
+import { assertIdentityReady } from "./services/identityClient";
 
 
 const app = makeApp();
 
 ensureAvatarDir();
+
+// Auth-scoped API responses must never be browser-cached across users.
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
+
 app.use(
   "/uploads",
   express.static(path.resolve(UPLOAD_ROOT), {
@@ -53,6 +63,11 @@ const PORT = Number(process.env.PORT) || 3002;
 
 async function start() {
   try {
+    const requireIdentity = (process.env.REQUIRE_IDENTITY_ON_BOOT ?? "true").toLowerCase() === "true";
+    if (requireIdentity) {
+      await assertIdentityReady();
+      console.log("Identity dependency check passed");
+    }
     await bootstrapDatabase();
     app.listen(PORT, () => {
       console.log(`Directory Service running on port ${PORT} 🌍`);
