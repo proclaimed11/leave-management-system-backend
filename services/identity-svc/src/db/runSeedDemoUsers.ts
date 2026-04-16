@@ -23,16 +23,45 @@ const DEMO_USERS: {
   company_key: string;
 }[] = [
   { employee_number: "ADM-DEMO-01", email: "admin.demo@mail.com", role_key: "admin", password: "password", full_name: "Demo Administrator", department: "ESL_IT", title: "Administrator", employment_type: "PERMANENT", status: "ACTIVE", location: "KE_MOMBASA", directory_role: "admin", company_key: "ESL" },
-  { employee_number: "HR-DEMO-01", email: "hr.demo@mail.com", role_key: "HR", password: "password123", full_name: "Demo HR Officer", department: "ESL_HR", title: "HR Officer", employment_type: "PERMANENT", status: "ACTIVE", location: "KE_MOMBASA", directory_role: "HR", company_key: "ESL" },
-  { employee_number: "EMP-DEMO-01", email: "employee.demo@mail.com", role_key: "employee", password: "password123", full_name: "Demo Employee", department: "ESL_AGENCY", title: "Agent", employment_type: "PERMANENT", status: "ACTIVE", location: "KE_MOMBASA", directory_role: "employee", company_key: "ESL" },
-  { employee_number: "SUP-DEMO-01", email: "supervisor.demo@mail.com", role_key: "supervisor", password: "password123", full_name: "Demo Supervisor", department: "ESL_TECH", title: "Team Lead", employment_type: "PERMANENT", status: "ACTIVE", location: "KE_MOMBASA", directory_role: "supervisor", company_key: "ESL" },
-  { employee_number: "HOD-DEMO-01", email: "hod.demo@mail.com", role_key: "hod", password: "password123", full_name: "Demo Head of Department", department: "ESL_QHSSE", title: "HOD", employment_type: "PERMANENT", status: "ACTIVE", location: "KE_MOMBASA", directory_role: "hod", company_key: "ESL" },
-  { employee_number: "MGT-DEMO-01", email: "management.demo@mail.com", role_key: "management", password: "password123", full_name: "Demo Management", department: "ESL_EXCOM", title: "Executive", employment_type: "PERMANENT", status: "ACTIVE", location: "KE_MOMBASA", directory_role: "management", company_key: "ESL" },
-  { employee_number: "CON-DEMO-01", email: "consultant.demo@mail.com", role_key: "consultant", password: "password123", full_name: "Demo Consultant", department: "ESL_AUDIT", title: "Consultant", employment_type: "CONTRACT", status: "ACTIVE", location: "KE_MOMBASA", directory_role: "consultant", company_key: "ESL" },
+  { employee_number: "HR-TZ-01", email: "hr.tz@mail.com", role_key: "HR", password: "password123", full_name: "HR Tanzania", department: "ESL_HR", title: "HR Officer", employment_type: "PERMANENT", status: "ACTIVE", location: "TZ_DAR_ES_SALAAM", directory_role: "HR", company_key: "ESL" },
+  { employee_number: "HR-KE-01", email: "hr.ke@mail.com", role_key: "HR", password: "password123", full_name: "HR Kenya", department: "ESL_HR", title: "HR Officer", employment_type: "PERMANENT", status: "ACTIVE", location: "KE_MOMBASA", directory_role: "HR", company_key: "ESL" },
+  { employee_number: "HR-UG-01", email: "hr.ug@mail.com", role_key: "HR", password: "password123", full_name: "HR Uganda", department: "ESL_HR", title: "HR Officer", employment_type: "PERMANENT", status: "ACTIVE", location: "UG_KAMPALA", directory_role: "HR", company_key: "ESL" },
+  { employee_number: "HR-RW-01", email: "hr.rw@mail.com", role_key: "HR", password: "password123", full_name: "HR Rwanda", department: "ESL_HR", title: "HR Officer", employment_type: "PERMANENT", status: "ACTIVE", location: "RW_RWANDA", directory_role: "HR", company_key: "ESL" },
+  { employee_number: "HOD-IT-01", email: "hod.it@mail.com", role_key: "hod", password: "password123", full_name: "HOD IT", department: "ESL_IT", title: "HOD", employment_type: "PERMANENT", status: "ACTIVE", location: "TZ_DAR_ES_SALAAM", directory_role: "hod", company_key: "ESL" },
+  { employee_number: "HOD-FIN-01", email: "hod.finance@mail.com", role_key: "hod", password: "password123", full_name: "HOD Finance", department: "ESL_FINANCE", title: "HOD", employment_type: "PERMANENT", status: "ACTIVE", location: "KE_MOMBASA", directory_role: "hod", company_key: "ESL" },
+  { employee_number: "HOD-AGY-01", email: "hod.agency@mail.com", role_key: "hod", password: "password123", full_name: "HOD Agency", department: "ESL_AGENCY", title: "HOD", employment_type: "PERMANENT", status: "ACTIVE", location: "UG_KAMPALA", directory_role: "hod", company_key: "ESL" },
+  { employee_number: "EMP-TZ-01", email: "employee1.tz@mail.com", role_key: "employee", password: "password123", full_name: "Employee 1 Tanzania", department: "ESL_IT", title: "Employee", employment_type: "PERMANENT", status: "ACTIVE", location: "TZ_DAR_ES_SALAAM", directory_role: "employee", company_key: "ESL" },
+  { employee_number: "EMP-TZ-02", email: "employee2.tz@mail.com", role_key: "employee", password: "password123", full_name: "Employee 2 Tanzania", department: "ESL_IT", title: "Employee", employment_type: "PERMANENT", status: "ACTIVE", location: "TZ_DAR_ES_SALAAM", directory_role: "employee", company_key: "ESL" },
+  { employee_number: "EMP-KE-01", email: "employee1.ke@mail.com", role_key: "employee", password: "password123", full_name: "Employee 1 Kenya", department: "ESL_FINANCE", title: "Employee", employment_type: "PERMANENT", status: "ACTIVE", location: "KE_MOMBASA", directory_role: "employee", company_key: "ESL" },
+  { employee_number: "EMP-KE-02", email: "employee2.ke@mail.com", role_key: "employee", password: "password123", full_name: "Employee 2 Kenya", department: "ESL_FINANCE", title: "Employee", employment_type: "PERMANENT", status: "ACTIVE", location: "KE_MOMBASA", directory_role: "employee", company_key: "ESL" },
+  { employee_number: "EMP-UG-01", email: "employee1.ug@mail.com", role_key: "employee", password: "password123", full_name: "Employee 1 Uganda", department: "ESL_AGENCY", title: "Employee", employment_type: "PERMANENT", status: "ACTIVE", location: "UG_KAMPALA", directory_role: "employee", company_key: "ESL" },
+  { employee_number: "EMP-UG-02", email: "employee2.ug@mail.com", role_key: "employee", password: "password123", full_name: "Employee 2 Uganda", department: "ESL_AGENCY", title: "Employee", employment_type: "PERMANENT", status: "ACTIVE", location: "UG_KAMPALA", directory_role: "employee", company_key: "ESL" },
+];
+
+const DEPRECATED_SEED_EMAILS = [
+  "admin@mail.com",
+  "hr.demo@mail.com",
+  "employee.demo@mail.com",
+  "supervisor.demo@mail.com",
+  "hod.demo@mail.com",
+  "management.demo@mail.com",
+  "consultant.demo@mail.com",
 ];
 
 export async function seedDemoUsers(): Promise<void> {
   const userRoles = new UserRoleRepository();
+
+  if (DEPRECATED_SEED_EMAILS.length > 0) {
+    const { rows } = await pool.query<{ id: number }>(
+      `SELECT id FROM users WHERE email = ANY($1::text[])`,
+      [DEPRECATED_SEED_EMAILS]
+    );
+    const userIds = rows.map((row) => row.id);
+    if (userIds.length > 0) {
+      await pool.query(`DELETE FROM user_roles WHERE user_id = ANY($1::int[])`, [userIds]);
+      await pool.query(`DELETE FROM users WHERE id = ANY($1::int[])`, [userIds]);
+    }
+  }
 
   for (const u of DEMO_USERS) {
     const email = u.email.toLowerCase();
@@ -41,7 +70,11 @@ export async function seedDemoUsers(): Promise<void> {
     const ins = await pool.query<{ id: number }>(
       `INSERT INTO users (employee_number, email, password_hash, status, is_active)
        VALUES ($1, $2, $3, 'ACTIVE', true)
-       ON CONFLICT (email) DO NOTHING
+       ON CONFLICT (email) DO UPDATE SET
+         employee_number = EXCLUDED.employee_number,
+         password_hash = EXCLUDED.password_hash,
+         status = 'ACTIVE',
+         is_active = true
        RETURNING id`,
       [u.employee_number, email, password_hash]
     );
@@ -60,6 +93,7 @@ export async function seedDemoUsers(): Promise<void> {
       continue;
     }
 
+    await pool.query(`DELETE FROM user_roles WHERE user_id = $1`, [userId]);
     await userRoles.assignRole({ user_id: userId, role_key: u.role_key });
     console.log(`OK: ${email} (${u.role_key})`);
 

@@ -4,6 +4,7 @@ import { Client } from "pg";
 import { pool } from "./connection";
 import { CONFIG } from "../utils/config";
 import { seedDefaultAdmin } from "./seedDefaultAdmin";
+import { seedDemoUsers } from "./runSeedDemoUsers";
 
 type MigrationRow = {
   filename: string;
@@ -100,4 +101,5 @@ export async function bootstrapDatabase(): Promise<void> {
   await ensureDatabaseExists();
   await runPendingMigrations();
   await seedDefaultAdmin();
+  await seedDemoUsers();
 }

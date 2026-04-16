@@ -1,9 +1,9 @@
 import { pool } from "./connection";
 import { hashPassword } from "../utils/password";
 
-const DEFAULT_ADMIN_EMPLOYEE_NUMBER = "SYSADMIN";
-const DEFAULT_ADMIN_EMAIL = "admin@mail.com";
-const DEFAULT_ADMIN_PASSWORD = "password123";
+const DEFAULT_ADMIN_EMPLOYEE_NUMBER = "ADM-DEMO-01";
+const DEFAULT_ADMIN_EMAIL = "admin.demo@mail.com";
+const DEFAULT_ADMIN_PASSWORD = "password";
 
 /**
  * If the users table has no rows, inserts the bootstrap admin and assigns the `admin` role.
