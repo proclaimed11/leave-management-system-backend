@@ -16,7 +16,7 @@ app.use("/internal", internalRoutes as any);
 // Global error handler
 app.use(errorHandler);
 
-const PORT = 3005;
+const PORT = Number(process.env.PORT) || 3005;
 
 async function start() {
   try {
