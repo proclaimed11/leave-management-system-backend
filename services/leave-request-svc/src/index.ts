@@ -25,7 +25,7 @@ app.use("/calendar", calendarRoutes as any);
 // Global error handler
 app.use(errorHandler);
 
-const PORT = 3006;
+const PORT = Number(process.env.PORT) || 3006;
 
 async function start() {
   try {
