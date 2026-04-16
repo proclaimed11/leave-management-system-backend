@@ -11,15 +11,24 @@ interface DeductPayload {
 }
 
 export async function getEntitlements(employeeNumber: string) {
-  const r = await axios.get<{ entitlements: EntitlementRow[] }>(
-    `${CONFIG.ENTITLEMENT_SVC_URL}/internal/entitlement/${encodeURIComponent(
-      employeeNumber
-    )}?year=${new Date().getFullYear()}`,
-    {
-      headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY! },
-    }
-  );
-  return r.data.entitlements ?? [];
+  try {
+    const r = await axios.get<{ entitlements: EntitlementRow[] }>(
+      `${CONFIG.ENTITLEMENT_SVC_URL}/internal/entitlement/${encodeURIComponent(
+        employeeNumber
+      )}?year=${new Date().getFullYear()}`,
+      {
+        headers: { "x-internal-key": process.env.INTERNAL_SERVICE_KEY! },
+      }
+    );
+    return r.data.entitlements ?? [];
+  } catch (error: any) {
+    // Keep apply-leave overview usable even when entitlement service is unavailable.
+    console.warn(
+      "Failed to fetch entitlements for apply overview, falling back to empty balances:",
+      error?.response?.status ?? error?.message
+    );
+    return [];
+  }
 }
 
 export async function generateEntitlementsForOne(employeeNumber: string) {
