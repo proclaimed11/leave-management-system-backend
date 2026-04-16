@@ -18,7 +18,7 @@ app.use("/holidays", holidayRoutes as any )
 // Global error handler
 app.use(errorHandler);
 
-const PORT = 3004;
+const PORT = Number(process.env.PORT) || 3004;
 
 async function start() {
   try {
